@@ -3,11 +3,26 @@ const canvas = document.querySelector("#myCanvas");
 var ctx = canvas.getContext("2d");
 
 var x = 200, y = 200, r=100;
+// var shadowDX = 5, shadowDY = 5;
+// var shadowSmooth = 10;
 
 function paint()
 {
     ctx.clearRect(0, 0, canvas.width, canvas.height);  // 清空画布
 
+    // ctx.fillStyle = "rgba(0,0,0,0.1)";
+    // ctx.beginPath();
+    // ctx.arc(x+shadowDX-shadowSmooth, y+shadowDY, r, 0, Math.PI * 2, true);
+    // ctx.fill();
+    // ctx.beginPath();
+    // ctx.arc(x+shadowDX+shadowSmooth, y+shadowDY, r, 0, Math.PI * 2, true);
+    // ctx.fill();
+    // ctx.beginPath();
+    // ctx.arc(x+shadowDX, y+shadowDY-shadowSmooth, r, 0, Math.PI * 2, true);
+    // ctx.fill();
+    // ctx.beginPath();
+    // ctx.arc(x+shadowDX, y+shadowDY+shadowSmooth, r, 0, Math.PI * 2, true);
+    // ctx.fill();
     ctx.fillStyle = "black";
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2, true);
