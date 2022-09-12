@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photographs</title>
+</head>
+<body style="margin:0; padding:0; background-color:white;">
+    <h1 style="padding:1em; font-size:3em;">Generative Art</h1>
+    <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
+                background-color:rgb(247, 247, 247);">
+        <div id="images-container" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
+    </div>
+    <script src="render/images-responsive-layout.js"></script>
+    <script>ImagesResponsiveLayout.addImages2("images-container", "assets/generative-art/grow/small/", "assets/generative-art/grow/lq/", [
+            "0.jpg", "11.jpg", "1.jpg", "2.jpg", "40.jpg", "4.jpg", "6.jpg",
+            "8.jpg", "9.jpg", "生长.gif", "展示(低清).jpg"
+        ], [
+            "0.png", "11.png", "1.png", "2.png", "40.png", "4.png", "6.png",
+            "8.png", "9.png", "生长.gif", "展示(低清).jpg"
+        ], 350/*heightMin*/, 500/*heightMax*/);</script>
+</body>
+</html>

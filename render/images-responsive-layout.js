@@ -106,3 +106,20 @@ ImagesResponsiveLayout.addImages = function(containerId, pathSmall, pathOrigin, 
         ImagesResponsiveLayout.layout(containerId, heightMin, heightMax);
     });
 }
+
+ImagesResponsiveLayout.addImages2 = function(containerId, pathSmall, pathOrigin, imagesSmall, imagesOrigin, heightMin, heightMax)  // 在pathSmall和pathOrigin中的对应文件不同名时使用，通常用于扩展名不同时
+{
+    var container = document.getElementById(containerId);
+    var content = "";
+    for(var i1=0;i1<imagesSmall.length;i1++)
+    {
+        content += '<a href="'+pathOrigin+imagesOrigin[i1]+'"><img src="'+pathSmall+imagesSmall[i1]+'" style="position:absolute; padding:0em; opacity:0;" height='+heightMin+'px title="'+imagesOrigin[i1]+'" alt="'+imagesOrigin[i1]+'"></a>';
+    }
+    container.innerHTML = content;
+    
+    setTimeout(()=>{ImagesResponsiveLayout.layout(containerId, heightMin, heightMax);}, 10);
+
+    window.addEventListener("resize", function(){  // 尺寸变更监听，用于使得画布占满整个页面
+        ImagesResponsiveLayout.layout(containerId, heightMin, heightMax);
+    });
+}
