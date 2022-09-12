@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CG & 3d Printing</title>
+</head>
+<body style="margin:0; padding:0;">
+    <h1 style="padding:1em; font-size:3em;">CG</h1>
+    <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
+                background-color:rgb(247, 247, 247);">
+        <div id="images-container1" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
+    </div>
+
+    <h1 style="padding:1em; font-size:3em;">3d Printing</h1>
+    <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
+                background-color:rgb(247, 247, 247);">
+        <div id="images-container2" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
+    </div>
+
+    <script src="render/images-responsive-layout.js"></script>
+    <script>ImagesResponsiveLayout.addImages("images-container1", "assets/cg/small/", "assets/cg/lq/", [
+            "0_调色.jpg", "0.jpg", "1_1.jpg", "1.jpg", "230帧.jpg", "4_球极投影_2.jpg",
+            "阳光书房(夜晚)(低清).jpg", "散射吸收球玻璃块_调色.jpg", "阳光书房(低清).jpg", "球面上分布小球.jpg",
+            "圆内连线.jpg", "吸积盘.jpg", "层膜.jpg", "the-staircase.jpg"
+        ], 350/*heightMin*/, 550/*heightMax*/);</script>
+    <script>ImagesResponsiveLayout.addImages("images-container2", "assets/3d-printing/small/", "assets/3d-printing/lq/", [
+            "IMG_20210716_120648.jpg", "IMG_20210821_231224.jpg",
+            "IMG_20211012_154927.jpg",
+            "IMG_20211120_212238.jpg", "IMG_20211120_212346.jpg",
+            "IMG_20211120_212905.jpg", "IMG_20211118_180532.jpg"
+        ], 350/*heightMin*/, 550/*heightMax*/);</script>
+</body>
+</html>

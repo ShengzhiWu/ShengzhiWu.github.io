@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paintings</title>
+</head>
+<body style="margin:0; padding:0;">
+    <h1 style="padding:1em; font-size:3em;">Paintings</h1>
+    <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
+                background-color:rgb(247, 247, 247);">
+        <div id="images-container1" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
+    </div>
+
+    <script src="render/images-responsive-layout.js"></script>
+    <script>ImagesResponsiveLayout.addImages("images-container1", "assets/paintings/small/", "assets/paintings/lq/", [
+            "半城柳色客栈.jpg", "清和月青旅.jpg", "花瓶.jpg"
+        ], 350/*heightMin*/, 550/*heightMax*/);</script>
+</body>
+</html>
