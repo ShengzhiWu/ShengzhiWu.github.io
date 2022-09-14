@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Creator</title>
+    <style>
+        h1{
+            text-align:center;
+            font-size:3em;
+        }
+        p{
+            text-indent:2em;
+        }
+    </style>
+</head>
+<body style="background-color:#555555">
+        
+    <div style="background-color:white;
+                width:60%;
+                margin-left:auto;
+                margin-right:auto;
+                margin-top:2em;
+                margin-bottom:6em;
+                box-shadow:0.6em 3em 3em #2b2b2b;
+                padding-top:4em;
+                padding-bottom:15em;
+                padding-left:8em;
+                padding-right:8em;">
+        <h1>Audio Creator</h1>
+        <p>
+            Audio Creator 具有节点式的编程界面（类似 Grasshopper 、 Houdini 、 Substance Designer ），这是近年来流行的交互式界面设计风格，能够帮助用户快速地构建想要的逻辑。
+            例如，如果用户想生成类似警笛的声音，可以放置两个产生正弦波的节点，其中一个频率为数百赫兹（警笛声的频率），另一个频率为1 Hz左右（警笛声响度变化的频率），
+            然后将两种正弦波相乘（这样低频正弦波成了高频正弦波的包络），即得结果。
+        </p>
+        <p>
+            一个典型的 Audio Creator 文档类似下图。
+        </p>
+        <p style="text-align: center;">
+            <img src="assets/audio-creator/风铃声节点程序.png" title="说明框" alt="说明框" style="width: 90%">
+        </p>
+        <p>
+            Audio Creator 具有良好的交互式体验。
+        </p>
+        <p style="text-align: center;">
+            <img src="assets/audio-creator/交互.gif" title="交互" alt="交互" style="width: 40%">
+            <img src="assets/audio-creator/矢量界面.gif" title="矢量界面" alt="矢量界面" style="width: 40%">
+        </p>
+        <p style="text-align: center;">
+        </p>
+        <p style="text-align: center;">
+            <img src="assets/audio-creator/说明框.gif" title="说明框" alt="说明框" style="width: 50%">
+        </p>
+        <p>
+            根据目前测试的结果， Audio Creator 能有效地生成多类型的音效。
+            下面展示一些结果，您可以点击图片播放相应的声音。
+        </p>
+        <script>
+            function play1(){
+                var audio = new Audio('assets/audio-creator/虫鸣.mp3');
+                audio.play();
+            }
+            function play2(){
+                var audio = new Audio('assets/audio-creator/敲键盘.mp3');
+                audio.play();
+            }
+            function play3(){
+                var audio = new Audio('assets/audio-creator/烟花.mp3');
+                audio.play();
+            }
+            function play4(){
+                var audio = new Audio('assets/audio-creator/风铃.mp3');
+                audio.play();
+            }
+            function play5(){
+                var audio = new Audio('assets/audio-creator/自行车铃.mp3');
+                audio.play();
+            }
+            function play6(){
+                var audio = new Audio('assets/audio-creator/洛伦茨吸引子.wav');
+                audio.play();
+            }
+        </script>
+        <p style="text-align: center;">
+            <img src="assets/audio-creator/草地(局部).jpg" onclick="play1()" title="虫鸣" alt="虫鸣" style="width: 30%">
+            <img src="assets/audio-creator/键盘.jpg" onclick="play2()" title="敲键盘" alt="敲键盘" style="width: 30%">
+            <img src="assets/audio-creator/烟花(局部).jpg" onclick="play3()" title="烟花" alt="烟花" style="width: 30%">
+            <img src="assets/audio-creator/风铃(局部).jpg" onclick="play4()" title="风铃" alt="风铃" style="width: 30%">
+            <img src="assets/audio-creator/自行车铃.jpg" onclick="play5()"  title="自行车铃" alt="自行车铃" style="width: 30%">
+            <img src="assets/audio-creator/洛伦茨吸引子.jpg" onclick="play6()" title="洛伦茨吸引子" alt="洛伦茨吸引子" style="width: 30%">
+        </p>
+        <p>
+            与大多数节点式软件不同， Audio Creator 允许连接出现环路。
+            这意味着一组节点产生的信号可以被循环性地馈送至其自身。
+            一个典型的应用是实现一个可以求微分方程数值解的积分器，上面展示的最后一个音频就是这样生成的。
+            这还意味着一个事实： Audio Creator 是图灵完备的。
+            也就是说，原则上讲， Audio Creator 能生成几乎任何信号。
+        </p>
+    </div>
+</body>
+</html>
