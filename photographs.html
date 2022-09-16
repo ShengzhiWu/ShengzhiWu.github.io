@@ -6,8 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photographs</title>
 </head>
-<body style="margin:0; padding:0; background-color:white;">
+<body style="margin:0; padding:0; background-color:white;" onscroll="bookrack.scrolling()">
+    <div id="full" style="position:absolute; width:100; height:100%;"></div>
+
     <h1 style="padding:1em; font-size:3em;">Photographs</h1>
+
+    <!-- Bookrack -->
+    <h2 style="padding-left: 1em;">Infinite Bookracks</h2>
+    <div id="bookrack-container" style="position:relative; width:100%; height:50em; background-color: white;
+                overflow: hidden;">
+    </div>
+    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+        <p>
+            The original photo of this artwork was taken in a bookstore in Shanghai, China.
+            And it has been cliped and recombined here for secondarily creating.
+        </p>
+    </div>
+    <script src="render/bookrack.js"></script>
+
+    <h2 style="padding-left: 1em;">More</h2>
     <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
                 background-color:rgb(247, 247, 247);">
         <div id="images-container" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
