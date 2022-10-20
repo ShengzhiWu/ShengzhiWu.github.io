@@ -5,8 +5,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photographs</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 </head>
 <body style="margin:0; padding:0; background-color:white;" onscroll="bookrack.scrolling()">
+    <!-- Navigator -->
+    <div class="navigator"></div>
+    <script type="text/javascript">
+        $(".navigator").load('navigator.html');
+    </script>
+    
     <div id="full" style="position:absolute; width:100; height:100%;"></div>
 
     <h1 style="padding:1em; font-size:3em;">Photographs</h1>
