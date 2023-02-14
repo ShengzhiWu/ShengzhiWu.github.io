@@ -5,13 +5,25 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Staircase</title>
-    <script src="https://unpkg.com/three/build/three.js"></script>
-    <script src="https://unpkg.com/three/examples/jsm/controls/OrbitControls.js"></script>
-    <script src="https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js"></script>
-    <script src="https://unpkg.com/three/examples/jsm/loaders/DRACOLoader.js"></script>
+    <script type="importmap">
+			{
+			"imports": {
+				"three": "https://unpkg.com/three/build/three.module.js"
+			}
+			}
+		</script>
+    <!-- <script src="https://unpkg.com/three/build/three.module.js" type="module"></script>
+    <script src="https://unpkg.com/three/examples/jsm/controls/OrbitControls.js" type="module"></script>
+    <script src="https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js" type="module"></script>
+    <script src="https://unpkg.com/three/examples/jsm/loaders/DRACOLoader.js" type="module"></script> -->
 </head>
 <body style="margin:0; padding:0;">
-    <script>
+    <script type="module">
+        import * as THREE from "https://unpkg.com/three/build/three.module.js";
+        import {OrbitControls} from "https://unpkg.com/three/examples/jsm/controls/OrbitControls.js";
+        import {GLTFLoader} from "https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js";
+        import {DRACOLoader} from "https://unpkg.com/three/examples/jsm/loaders/DRACOLoader.js";
+
         //场景
         var scene = new THREE.Scene();
 
@@ -37,13 +49,13 @@
 
         render();
 
-        var controls = new THREE.OrbitControls(camera, renderer.domElement);  //  鼠标导航控件
+        var controls = new OrbitControls(camera, renderer.domElement);  //  鼠标导航控件
         controls.target.set(0, 0, 0);
         controls.addEventListener('change', render);//监听鼠标、键盘事件
 
-        const loader = new THREE.GLTFLoader();  // glTF文件载入器
-        const dracoLoader = new THREE.DRACOLoader();  // 压缩版glTF文件载入器
-        dracoLoader.setDecoderPath("https://unpkg.com/three/examples/js/libs/draco/");
+        const loader = new GLTFLoader();  // glTF文件载入器
+        const dracoLoader = new DRACOLoader();  // 压缩版glTF文件载入器
+        dracoLoader.setDecoderPath("https://unpkg.com/three/examples/jsm/libs/draco/");
         dracoLoader.preload();
         loader.setDRACOLoader(dracoLoader);
         loader.load('assets/the-staircase/room.glb',
