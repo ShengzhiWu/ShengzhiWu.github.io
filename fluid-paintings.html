@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Paintings</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+</head>
+<body style="margin:0; padding:0;">
+    <!-- Navigator -->
+    <div class="navigator"></div>
+    <script type="text/javascript">
+        $(".navigator").load('navigator.html');
+    </script>
+
+    <h1 style="padding:1em; font-size:3em;">Fluid Paintings</h1>
+    <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
+                background-color:rgb(247, 247, 247);">
+        <div id="images-container1" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
+    </div>
+
+    <script src="render/images-responsive-layout.js"></script>
+    <script>ImagesResponsiveLayout.addImages("images-container1", "assets/fluid-paintings/small/", "assets/fluid-paintings/lq/", [
+            "IMG_20230215_104001.jpg", "IMG_20230215_104158.jpg",
+            "IMG_20230215_104404.jpg", "IMG_20230215_104438.jpg",
+            "IMG_20230215_104534.jpg", "IMG_20230215_104630.jpg"
+        ], 350/*heightMin*/, 550/*heightMax*/);</script>
+</body>
+</html>
