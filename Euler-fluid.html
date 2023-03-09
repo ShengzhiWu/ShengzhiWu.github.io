@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euler Fluid</title>
+</head>
+<body style="margin:0; padding:0; position:absolute; user-select:none; background: #eee;">
+    <canvas id="canvas" style="margin:0; padding:0;"></canvas>
+    <p id="text" style="margin: 0; padding-left: 0.5em;"></p>
+    
+    <script type="module">
+        import * as THREE from "https://cdn.bootcdn.net/ajax/libs/three.js/0.150.1/three.module.js";
+
+        const size = 512;
+        const fieldWidth = size, fieldHeight = size;
+        var dt = 1.;  // 0.02
+        const encodeAbsMax = 100.;  // GLSL离屏渲染结果会被限制在[0, 1]内，所以有储存数据时需要映射以编码。映射：[-encodeAbsMax, encodeAbsMax] -> [0, 1]
+        var jacobiIterations = 300;  // 根据散度求解无旋场时雅可比迭代次数
+        var jacobiFactor = 1.;  // 雅可比迭代中的学习率，过高会导致迭代发散
+        var colorFadeSpeed = 0.1;  // 颜色减淡
+        var fps = 60;  // 实际帧率，在模拟过程中会自动改变
+
+        const canvas = document.querySelector('#canvas');
+        const text = document.querySelector('#text');
+        // canvas.width = window.innerWidth;
+        // canvas.height = window.innerHeight;
+
+        const renderer = new THREE.WebGLRenderer({canvas});
+        renderer.setSize(fieldWidth, fieldHeight);
+        
+        renderer.autoClearColor = false;
+
+        const wall = new THREE.WebGLRenderTarget(fieldWidth, fieldHeight);
+        const velocity = new THREE.WebGLRenderTarget(fieldWidth, fieldHeight, {type:THREE.FloatType});
+        const presure = new THREE.WebGLRenderTarget(fieldWidth, fieldHeight, {type:THREE.FloatType});
+        const color = new THREE.WebGLRenderTarget(fieldWidth, fieldHeight, {type:THREE.FloatType});
+        // const temporaryTexture = new THREE.DataTexture(new Float32Array(size*size*4), fieldWidth, fieldHeight, THREE.RGBAFormat, THREE.FloatType);
+        const temporaryTarget1 = new THREE.WebGLRenderTarget(fieldWidth, fieldHeight, {type:THREE.FloatType});
+        const temporaryTarget2 = new THREE.WebGLRenderTarget(fieldWidth, fieldHeight, {type:THREE.FloatType});
+
+        const camera = new THREE.OrthographicCamera(
+            -1, // left
+            1, // right
+            1, // top
+            -1, // bottom
+            -1, // near,
+            1, // far
+        );
+
+        function encode(value) {
+            for(var i=0;i<value.length;i++)
+                value[i] = value[i]*(0.5/encodeAbsMax)+0.5;
+            return value;
+        }
+
+        const encodeGLSLCode = `
+            vec4 encode(vec4 v) {  // [-encodeAbsMax, encodeAbsMax] -> [0, 1]
+                return v*(0.5/encodeAbsMax)+0.5;
+             }
+        `
+
+        const decodeGLSLCode = `
+            vec4 decode(vec4 v) {  // [0, 1] -> [-encodeAbsMax, encodeAbsMax]
+                return (v-0.5)*(encodeAbsMax*2.);
+            }
+        `
+
+        const copyFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D src;
+
+            void main() {
+                gl_FragColor = texture2D(src, gl_FragCoord.xy/u_resolution);
+            }
+        `
+
+        const initializeWallFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+
+            void main() {
+                vec2 p = gl_FragCoord.xy/u_resolution.xy;
+                gl_FragColor = vec4(0., 0., 0., 1.);
+                if(gl_FragCoord.x<1.||gl_FragCoord.x>u_resolution.x-1.||gl_FragCoord.y<1.||gl_FragCoord.y>u_resolution.y-1.)
+                    gl_FragColor = vec4(1., 0., 0., 1.);
+            }
+        `
+
+        const initializeVelocityFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform float encodeAbsMax;
+
+            `+encodeGLSLCode+`
+
+            void main() {
+                vec2 p = gl_FragCoord.xy/u_resolution.xy;
+                gl_FragColor = vec4(0., 0., 0., 0.);
+                // if(length(p-vec2(0.5, 0.5))<0.1)
+                //     gl_FragColor = vec4(1., 0., 0., 0.);
+                gl_FragColor = encode(gl_FragColor);
+            }
+        `
+
+        const initializeColorFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+
+            void main() {
+                vec2 p = gl_FragCoord.xy/u_resolution.xy;
+                gl_FragColor = vec4(1., 1., 1., 1.);
+                // if(length(p-vec2(0.5, 0.5))<0.1)
+                //     gl_FragColor = vec4(0., 0., 0., 1.);
+            }
+        `
+
+        const colorFadeFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D color;
+            uniform float factor;
+
+            void main() {
+                gl_FragColor = texture2D(color, gl_FragCoord.xy/u_resolution.xy);
+                gl_FragColor = gl_FragColor+(vec4(1., 1., 1., 1.)-gl_FragColor)*factor;
+            }
+        `
+
+        const paintFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D field;
+            uniform float x;
+            uniform float y;
+            uniform float r;
+            uniform vec4 value;
+
+            void main() {
+                if(length(gl_FragCoord.xy-vec2(x, y))<r)
+                    gl_FragColor = value;
+                else
+                    gl_FragColor = texture2D(field, gl_FragCoord.xy/u_resolution.xy);
+            }
+        `
+
+        const mainFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D color;
+            uniform sampler2D wall;
+
+            void main() {
+                gl_FragColor = texture2D(color, gl_FragCoord.xy/u_resolution);
+                // gl_FragColor = texture2D(wall, gl_FragCoord.xy/u_resolution);
+            }
+        `
+
+        const showFieldFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D field;
+            uniform float encodeAbsMax;
+
+            `+decodeGLSLCode+`
+
+            void main() {
+                gl_FragColor = decode(texture2D(field, gl_FragCoord.xy/u_resolution))+0.5;
+                gl_FragColor.w = 1.;
+            }
+        `
+
+         // 平流输运
+        const advectionFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform float dt;
+            uniform sampler2D wall;
+            uniform sampler2D velocity;
+            uniform sampler2D value;
+            uniform float encodeAbsMax;
+
+            `+decodeGLSLCode+`
+
+            void main() {
+                vec2 p = gl_FragCoord.xy/u_resolution;
+                vec2 v = decode(texture2D(velocity, p)).xy;
+                gl_FragColor = texture2D(value, p-v*dt);
+            }
+        `
+
+        // 边界效应
+        // const boundaryEffectFragmentShader = `
+        // #ifdef GL_ES
+        // precision mediump float;
+        // #endif
+
+        // uniform vec2 u_resolution;
+        // uniform sampler2D wall;
+        // uniform sampler2D velocity;
+        // uniform float encodeAbsMax;
+
+        // `+encodeGLSLCode+`
+
+        // void main() {
+        //     vec2 p = gl_FragCoord.xy/u_resolution;
+        //     if(texture2D(wall, p).x>0.5) {
+        //         gl_FragColor = encode(vec4(0., 0., 0., 0.));
+        //     }
+        //     else {
+        //         gl_FragColor = texture2D(value, p);
+        //     }
+        // }
+        // `
+
+        // 压强（即速度场的散度）
+        const presureFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D velocity;
+            uniform float encodeAbsMax;
+
+            `+encodeGLSLCode+decodeGLSLCode+`
+
+            void main() {
+                gl_FragColor = encode(vec4(0., (decode(texture2D(velocity, (gl_FragCoord.xy+vec2(1., 0.))/u_resolution)).x-decode(texture2D(velocity, (gl_FragCoord.xy+vec2(-1., 0.))/u_resolution)).x+decode(texture2D(velocity, (gl_FragCoord.xy+vec2(0., 1.))/u_resolution)).y-decode(texture2D(velocity, (gl_FragCoord.xy+vec2(0., -1.))/u_resolution)).y)*0.5, 0., 0.));
+            }
+        `
+        
+        // 泊松方程迭代求解器
+        const poissonEquationSolverFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform float dt;
+            uniform sampler2D value;  // 第一个分量为正在迭代的值，第二个分量为rho
+            uniform float encodeAbsMax;
+
+            `+encodeGLSLCode+decodeGLSLCode+`
+
+            void main() {
+                float average = (decode(texture2D(value, (gl_FragCoord.xy+vec2(-1., 0.))/u_resolution)).x+decode(texture2D(value, (gl_FragCoord.xy+vec2(1., 0.))/u_resolution)).x+decode(texture2D(value, (gl_FragCoord.xy+vec2(0., -1.))/u_resolution)).x+decode(texture2D(value, (gl_FragCoord.xy+vec2(0., 1.))/u_resolution)).x)*0.25;
+                vec4 valueCurrentRaw = decode(texture2D(value, gl_FragCoord.xy/u_resolution));
+                float valueCurrent = valueCurrentRaw.x;
+                float rho = valueCurrentRaw.y;
+                gl_FragColor = encode(vec4(valueCurrent+(average-valueCurrent-rho*0.5)*dt, rho, 0., 0.));
+            }
+        `
+
+        // 修正速度场
+        const correctVelocityFragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform sampler2D velocity;
+            uniform sampler2D irrotationalFieldPhi;
+            uniform float encodeAbsMax;
+
+            `+encodeGLSLCode+decodeGLSLCode+`
+
+            void main() {
+                vec2 p = gl_FragCoord.xy/u_resolution;
+                vec2 grad = vec2(decode(texture2D(irrotationalFieldPhi, (gl_FragCoord.xy+vec2(1., 0.))/u_resolution)).x-decode(texture2D(irrotationalFieldPhi, (gl_FragCoord.xy+vec2(-1., 0.))/u_resolution)).x, decode(texture2D(irrotationalFieldPhi, (gl_FragCoord.xy+vec2(0., 1.))/u_resolution)).x-decode(texture2D(irrotationalFieldPhi, (gl_FragCoord.xy+vec2(0., -1.))/u_resolution)).x)*0.5;
+                gl_FragColor = encode(decode(texture2D(velocity, p))-vec4(grad*0.5, 0., 0.));
+            }
+        `
+
+        function renderToTarget(scene, target=null) {
+            renderer.setRenderTarget(target);
+            renderer.render(scene, camera);
+            renderer.setRenderTarget(null);
+        }
+
+        function copyToTarget(src, dst) {
+            const copyMaterial = new THREE.ShaderMaterial({
+                fragmentShader:copyFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                    src: {value: src.texture}
+                }
+            });
+            const copyScene = new THREE.Scene();
+            copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMaterial));
+            renderToTarget(copyScene, dst);
+        }
+
+        function initializeWall() {
+            const materialOffScreen = new THREE.ShaderMaterial({
+                fragmentShader:initializeWallFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)}
+                }
+            });
+            const sceneOffScreen = new THREE.Scene();
+            sceneOffScreen.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), materialOffScreen));
+            
+            renderToTarget(sceneOffScreen, wall);
+        }
+
+        function initializeVelocity() {
+            const materialOffScreen = new THREE.ShaderMaterial({
+                fragmentShader:initializeVelocityFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                    encodeAbsMax: {value: encodeAbsMax}
+                }
+            });
+            const sceneOffScreen = new THREE.Scene();
+            sceneOffScreen.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), materialOffScreen));
+            
+            renderToTarget(sceneOffScreen, velocity);
+
+            eliminateDivergence();  // 去散度
+        }
+
+        function initializeColor() {
+            const materialOffScreen = new THREE.ShaderMaterial({
+                fragmentShader:initializeColorFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)}
+                }
+            });
+            const sceneOffScreen = new THREE.Scene();
+            sceneOffScreen.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), materialOffScreen));
+            
+            renderToTarget(sceneOffScreen, color);
+        }
+
+        function initialize() {
+            initializeWall();
+            initializeVelocity();
+            initializeColor();
+        }
+
+        function colorFade() {  // 颜色减淡
+            const colorFadeMaterial = new THREE.ShaderMaterial({
+                fragmentShader:colorFadeFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                    color: {value: temporaryTarget1.texture},
+                    factor: {value: colorFadeSpeed/fps}
+                }
+            });
+            const colorFadeScene = new THREE.Scene();
+            colorFadeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), colorFadeMaterial));
+            copyToTarget(color, temporaryTarget1);
+            renderToTarget(colorFadeScene, color);
+        }
+
+        function paint(target, x, y, r, value) {
+            const paintMaterial = new THREE.ShaderMaterial({
+                fragmentShader:paintFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                    field: {value: temporaryTarget1.texture},
+                    x: {value: x},
+                    y: {value: y},
+                    r: {value: r},
+                    value: {value: new THREE.Vector4(value[0], value[1], value[2], value[3])}
+                }
+            });
+            const paintScene = new THREE.Scene();
+            paintScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), paintMaterial));
+            copyToTarget(target, temporaryTarget1);
+            // copyToTarget(temporaryTarget1, color);
+            renderToTarget(paintScene, target);
+        }
+
+        // function createAdvectionScene(field) {
+        //     const advectionMaterial = new THREE.ShaderMaterial({
+        //         fragmentShader:advectionFragmentShader,
+        //         uniforms: {
+        //             u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+        //             velocity: {value: velocity.texture},
+        //             value: {value: field.texture}
+        //         }
+        //     });
+        //     const advectionScene = new THREE.Scene();
+        //     advectionScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), advectionMaterial));
+        //     return advectionScene;
+        // }
+        
+        const advectionMaterial = new THREE.ShaderMaterial({
+            fragmentShader:advectionFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                dt: {value: dt},
+                velocity: {value: velocity.texture},
+                value: {value: temporaryTarget1.texture},
+                encodeAbsMax: {value: encodeAbsMax}
+            }
+        });
+        const advectionScene = new THREE.Scene();
+        advectionScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), advectionMaterial));
+        const selfAdvectionMaterial = new THREE.ShaderMaterial({
+            fragmentShader:advectionFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                dt: {value: dt},
+                velocity: {value: temporaryTarget1.texture},
+                value: {value: temporaryTarget1.texture},
+                encodeAbsMax: {value: encodeAbsMax}
+            }
+        });
+        const selfAdvectionScene = new THREE.Scene();
+        selfAdvectionScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), selfAdvectionMaterial));
+        // const velocityAdvectionScene = createAdvectionScene(velocity);
+        // const colorAdvectionScene = createAdvectionScene(color);
+        function advect() {  // 平流输运
+            // renderer.copyTextureToTexture(new THREE.Vector2(0, 0), color.texture, temporaryTexture);
+            copyToTarget(color, temporaryTarget1);
+            renderToTarget(advectionScene, color);
+            copyToTarget(velocity, temporaryTarget1);
+            renderToTarget(selfAdvectionScene, velocity);
+        }
+
+        // 计算散度
+        const presureMaterial = new THREE.ShaderMaterial({
+            fragmentShader:presureFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                velocity: {value: velocity.texture},
+                encodeAbsMax: {value: encodeAbsMax}
+            }
+        });
+        const presureScene = new THREE.Scene();
+        presureScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), presureMaterial));
+        function calculateDivergence() {
+            renderToTarget(presureScene, temporaryTarget1);  // 计算散度，结果记录在第2个分量
+        }
+
+        const jacobiMaterial1 = new THREE.ShaderMaterial({
+            fragmentShader:poissonEquationSolverFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                dt: {value: jacobiFactor},
+                value: {value: temporaryTarget1.texture},
+                encodeAbsMax: {value: encodeAbsMax}
+            }
+        });
+        const jacobiScene1 = new THREE.Scene();
+        jacobiScene1.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), jacobiMaterial1));
+        const jacobiMaterial2 = new THREE.ShaderMaterial({
+            fragmentShader:poissonEquationSolverFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                dt: {value: jacobiFactor},
+                value: {value: temporaryTarget2.texture},
+                encodeAbsMax: {value: encodeAbsMax}
+            }
+        });
+        const jacobiScene2 = new THREE.Scene();
+        jacobiScene2.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), jacobiMaterial2));
+        function jacobiIterat2Steps() {  // 雅可比迭代2步
+            renderToTarget(jacobiScene1, temporaryTarget2);
+            //TODO 对障碍物的处理
+            renderToTarget(jacobiScene2, temporaryTarget1);
+            //TODO 对障碍物的处理
+        }
+
+        const correctVelocityMaterial = new THREE.ShaderMaterial({
+            fragmentShader:correctVelocityFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                velocity: {value: temporaryTarget2.texture},
+                irrotationalFieldPhi: {value: temporaryTarget1.texture},
+                encodeAbsMax: {value: encodeAbsMax}
+            }
+        });
+        const correctVelocityScene = new THREE.Scene();
+        correctVelocityScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), correctVelocityMaterial));
+        function correctVelocity() {
+            copyToTarget(velocity, temporaryTarget2);
+            renderToTarget(correctVelocityScene, velocity);
+        }
+        
+        function eliminateDivergence() {  // 去除散度
+            calculateDivergence();
+
+            // 根据散度求解无旋场（雅可比迭代）
+            for(var i=0;i*2<jacobiIterations;i++)
+                jacobiIterat2Steps();
+            // showField(temporaryTarget1, 0.03);
+            
+            // 根据计算得到的无旋场修正速度场
+            correctVelocity();
+            // showField(velocity);
+        }
+
+        // const boundaryEffectMaterial = new THREE.ShaderMaterial({
+        //     fragmentShader:boundaryEffectFragmentShader,
+        //     uniforms: {
+        //         u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+        //         wall: {value: wall.texture},
+        //         velocity: {value: temporaryTarget1.texture},
+        //         encodeAbsMax: {value: encodeAbsMax}
+        //     }
+        // });
+        // const boundaryEffectScene = new THREE.Scene();
+        // boundaryEffectScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), boundaryEffectMaterial));
+        // function boundaryEffect() {  // 边界效应
+        //     copyToTarget(velocity, temporaryTarget1);
+        //     renderToTarget(boundaryEffectScene, velocity);
+        // }
+        
+        function evolveOneStep() {
+            advect();
+            // boundaryEffect();
+            eliminateDivergence();
+            colorFade();
+        }
+
+        const mainMaterial = new THREE.ShaderMaterial({
+            fragmentShader:mainFragmentShader,
+            uniforms: {
+                u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                color: {value: color.texture},
+                wall: {value: wall.texture}
+            }
+        });
+        const mainScene = new THREE.Scene();
+        mainScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mainMaterial));
+        
+        var lastFrameTime = new Date().getTime();
+        // var rendering = false;
+        function render() {
+            // if(rendering)
+            //     return;
+            // rendering = true;
+
+            if(controling) {
+                // console.log(mouseVX);
+                paint(velocity, mouseX, fieldHeight-mouseY, 30, encode([mouseVX/fieldWidth/(dt*fps), -mouseVY/fieldWidth/(dt*fps), 0, 0]));
+                // paint(velocity, mouseX, fieldHeight-mouseY, 30, encode([0, 1, 0, 0]));
+                paint(color, mouseX, fieldHeight-mouseY, 30, paintingColor);
+                eliminateDivergence();
+                controling = false;
+            }
+            evolveOneStep();
+            renderer.render(mainScene, camera);
+
+            //show FPS
+            const newTime = new Date().getTime();
+            fps = 1000/(newTime-lastFrameTime);
+            text.innerHTML = Math.round(fps)+' fps';
+            lastFrameTime = newTime;
+
+            // rendering = false;
+
+            setTimeout(render, 20);
+        }
+
+        function showRenderTarget(target) {
+            copyToTarget(target, null);
+        }
+
+        function showField(renderTarget, factor=1) {  // 可视化一个浮点场
+            const showFieldMaterial = new THREE.ShaderMaterial({
+                fragmentShader:showFieldFragmentShader,
+                uniforms: {
+                    u_resolution: {value: new THREE.Vector2(fieldWidth, fieldHeight)},
+                    field: {value: renderTarget.texture},
+                    encodeAbsMax: {value: encodeAbsMax*factor*0.5}
+                }
+            });
+            const showFieldScene = new THREE.Scene();
+            showFieldScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), showFieldMaterial));
+            renderToTarget(showFieldScene, null);
+        }
+
+        initialize();
+
+        paint(velocity, 50, fieldHeight/2-10, 40, encode([0.02/dt, 0, 0, 0]));
+        paint(color, 50, fieldHeight/2-10, 40, [1, 0, 0, 1]);
+        paint(velocity, fieldWidth-50, fieldHeight/2+10, 40, encode([-0.02/dt, 0, 0, 0]));
+        paint(color, fieldHeight-50, fieldHeight/2+10, 40, [0, 0, 1, 1]);
+        eliminateDivergence();
+
+        // showField(velocity);
+        render();
+        // setInterval(render, 1000/40);
+        // for(var i=0;i<100;i++)
+        //     render();
+
+        var mouseDown = false;
+        var mouseTime;
+        var mouseX, mouseY;
+        var mouseVX, mouseVY;
+        var mouseVMax = 1000;
+
+        // 人为控制流体
+        var controling = false;
+        var paintingColor;
+
+        canvas.addEventListener("mousedown", function(event){  // 按下
+            mouseTime = new Date().getTime();
+            mouseX = event.x;
+            mouseY = event.y;
+            paintingColor = [Math.random(), Math.random(), Math.random(), 1.];
+            mouseDown = true;
+        });
+
+        window.addEventListener("mouseup", function(event){  // 松开
+            mouseDown = false;
+        });
+
+        canvas.addEventListener("mousemove", function(event){  // 移动
+            if(mouseDown) {
+                const mouseDx = event.x-mouseX;
+                const mouseDy = event.y-mouseY;
+                const time = new Date().getTime();
+                const mouseDt = Math.max(10, time-mouseTime)*0.001;
+                mouseTime = time;
+                mouseX = event.x;
+                mouseY = event.y;
+                mouseVX = mouseDx/mouseDt;
+                mouseVY = mouseDy/mouseDt;
+                const mouseV = Math.sqrt(mouseVX*mouseVX+mouseVY*mouseVY);
+                if(mouseV>mouseVMax) {
+                    mouseVX = mouseVX*mouseVMax/mouseV;
+                    mouseVY = mouseVX*mouseVMax/mouseV;
+                }
+                controling = true;
+            }
+        });
+    </script>
+</body>
+</html>
