@@ -13,7 +13,7 @@
     <script type="module">
         import * as THREE from "https://cdn.bootcdn.net/ajax/libs/three.js/0.150.1/three.module.js";
 
-        const size = 128;
+        const size = 512;
         const fieldWidth = size, fieldHeight = size;
         var dt = 1.;  // 0.02
         const encodeAbsMax = 100.;  // GLSL离屏渲染结果会被限制在[0, 1]内，所以有储存数据时需要映射以编码。映射：[-encodeAbsMax, encodeAbsMax] -> [0, 1]
