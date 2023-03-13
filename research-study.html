@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Researches</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+</head>
+<body style="margin:0; padding:0;">
+    <!-- Navigator -->
+    <div class="navigator"></div>
+    <script type="text/javascript">
+        $(".navigator").load('navigator.html');
+    </script>
+    
+    <h1>Research</h1>
+
+    <!-- N-body Problems -->
+    <div style="position:relative; width:100%; height:30em;
+    background-color: white;">
+        <canvas id="canvasResearches" style="position:absolute; z-index:0;"></canvas>
+        <div style="position:absolute; width:100%; height:100%; z-index:1; box-shadow: 0em 0em 3em 0em rgba(0, 0, 0, 0.2) inset;"></div>
+        <div style="position:relative; top:4.2em; margin:0 auto; z-index:2;
+        color:black; text-align:center; font-size: 3em;">N-body Problems</div>
+    </div>
+    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+       <p>
+            We use a simple, fast, and flexible iterative numerical method in which we discretize the orbits into polygons and minimize the Lagrangian action to search for numeric periodic solutions of the N-body problem.
+            This method allows simple choreographies and other kind of solutions to be easily found even on a general personal computer or mobile phone.
+        </p>
+        <p>
+            In order to find more complex periodic solutions,
+            we introduced another useful method for finding orbits with geometric symmetries that can be artificially selected.
+            We initialize orbits with some symmetries and maintain the symmetries in iterations.
+            This makes sense because many solutions with geometric symmetry are unstable in the iteration process.
+            Introduction of each symmetry means the possibility of finding new solutions.
+            With this method we have found abundant new solutions.
+            This method is extremely important in three-dimensional cases.
+       </p>
+       <p>
+            A relevant paper is currently under review.
+       </p>
+    </div>
+
+    <!-- 张拉结构 -->
+    <div style="position:relative; width:100%; height:30em; background-color: black;
+                background-image: url(assets/张拉结构.jpg);
+                background-repeat: no-repeat;
+                background-position: center top;
+                background:url(assets/张拉结构.jpg) no-repeat right center;
+                background-size:cover;
+                background-attachment:fixed;">
+        <div style="position:relative; top:4.2em; margin:0 auto; z-index:2;
+        color:white; text-align:center; font-size: 3em;">Tensegrity</div>
+    </div>
+    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+        <p>
+            A tensegrity is a mechanical structure composed of several supporting elements (bars) and tensile elements (cables).
+            We introduced a method for designing tensegrity topology based on Cayley graphs.
+            We transfer the symmetry information of an abstract group into topology,
+            and then encode it into a matrix,
+            and eventually transfer the symmetry into geometry.
+            This process is accompanied by some dissipation of symmetry,
+            resulting in numerical results with lower level symmetries.
+            Our method provides an efficient and convenient way to obtain both symmetric and symmetry-broken tensegrities in Euclidean space of any dimension.
+        </p>
+    </div>
+
+    <!-- 磁偶极子系统 -->
+    <div style="position:relative; width:100%; height:30em; background-color: black;
+                background-image: url(assets/双列.png);
+                background-repeat: no-repeat;
+                background-position: center top;
+                background:url(assets/双列.png) no-repeat right center;
+                background-size:cover;
+                background-attachment:fixed;">
+        <div style="position:relative; top:4.2em; margin:0 auto; z-index:2;
+        color:black; text-align:center; font-size: 3em;">Magnetic Dipole Systems</div>
+    </div>
+    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+        <p>
+            This is an completely original research. 
+            I studied the system of magnetic dipoles in which the dipoles are fixed at artificially chosen locations in space.
+            The dipoles are only allowed to rotate.
+            I studied the behavior of this magnetic dipole system in external fields and its own magnetic field.
+        </p>
+        <p>
+            An intriguing and impressive discovery was that logic gates and memory cells can be fabricated by arranging magnetic dipoles in a specific way.
+            This means it is possible to build a computer composed of only magnetic dipoles.
+            I plan to write a paper describing such systems in the near future.
+        </p>
+        <p></p>
+    </div>
+
+    <!-- 具有运动转化性能的力学超材料 -->
+    <div style="position:relative; width:100%; height:30em; background-color: black;
+                background-image: url(assets/超材料.jpg);
+                background-repeat: no-repeat;
+                background-position: center top;
+                background:url(assets/超材料.jpg) no-repeat right center;
+                background-size:cover;
+                background-attachment:fixed;">
+        <div style="position:relative; top:4.2em; margin:0 auto; z-index:2;
+        color:white; text-align:center; font-size: 3em;">Mechanical Metamaterial</div>
+    </div>
+    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+        <p>
+            With elaborated structures, normal materials can have special overall mechanical characteristics.
+            For example, with well-designed grid of holes, normal elastic material can obtain negative Poisson's ratio as a whole.
+            Materials with designed structures are called metamaterials.
+            In recent years, the advancement of 3D printing technology has greatly powered the development in this field.
+            As a hotspot, various metamaterials  with negative Poisson's ratio have been designed and verified.
+            In an impressive study, the researchers achieved a serious of structures with programmable Poisson's ratio.
+            In other words, different parts of material can have different Poisson's ratios.
+            Another class of metamaterials with important application value are called pentamode metamaterials (PMMs), which have relatively low shear modulus and extremely high bulk modulus.
+            This property makes them behave somewhat like fluids. Such materials can be used to absorb mechanical waves.
+        </p>
+        <p>
+            I introduced several cloth like metamaterials, which can translate shear deformation to bending deformation.
+            In particular, stretching in certain directions can also be translated into bend.
+            Considering stretching is easy to apply and control, whereas bending is relatively difficult to implement, these shear-bend translating metamaterials have potential applications.
+        </p>
+    </div>
+
+    <!--基于泊松分布的深度自适应神经网络 -->
+    <div style="position:relative; width:100%; height:30em; background-color: white;
+                background-image: url(assets/深度自适应神经网络.svg);
+                background-repeat: no-repeat;
+                background-position: center top;
+                background:url(assets/深度自适应神经网络.svg) no-repeat right center;
+                background-size:cover;
+                background-attachment:fixed;">
+        <div style="position:relative; top:4.2em; margin:0 auto; z-index:2;
+        color:black; text-align:center; font-size: 3em;">Poisson distribution based depth adaptive neural networks</div>
+    </div>
+    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+        <p>
+            A traditional fully-connected neural network (FCN) has a certain depth, and each layer has a certain width.
+            These dimensions are hyperparameters and do not change in training.
+            Finding the right neural network structure usually requires going through different shape settings.
+        </p>
+        <p>
+            I introduced an substitute of FCN, the adaptive depth neural network.
+            It has a fixed number of neurons but has adaptive width and depth.
+            In other words, it can become shallow and wide, or deep and narrow continuously during training.
+            Note that the actual topology of neuron connections does not change.
+            Only the weights change during training.
+            The change in size is just a behavioral manifestation, not actual neuronal reorganization.
+        </p>
+        <p>
+            This is a redesign of one of the most fundamental structures of neural networks, and thus has broad potential applications.
+        </p>
+        <p>
+            The structure not only brings a training convenience,
+            but may also help improve the interpretability of the system.
+            Adaptive depth neural network actually provide a new measure of information complexity.
+            Intuitively, deeper neural networks means more nonlinear mappings and deeper patterns.
+            This complexity is often impossible to measure quantitatively.
+            If an adaptive deep neural network is used to learn the mapping (labeled data), the converged depth can reflect the complexity of the mapping.
+            We conducted numerical experiments,
+            in which we used neural networks of different depths to generate data,
+            and then used adaptive depth neural network to analyze the data.
+            We found adaptive depth neural network can indeed decode the complexity of information to a certain extent.
+        </p>
+    </div>
+    
+    <h1>Exhibition</h1>
+    <div style="padding-left: 3em; padding-right: 3em; padding-bottom: 10em;">
+        <p><a href="euler-fluid.html">Euler fluid simulation base on WebGL</a> (It will run extremely slowly in case your computer has no stand-alone video card)</p>
+    </div>
+
+    <script src="render/load-n-body-data.js"></script>
+    <script src="render/index.js"></script>
+</body>
+</html>
