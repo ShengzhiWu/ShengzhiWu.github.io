@@ -89,27 +89,43 @@
         color:white; text-align:center; font-size: 3em;">Audio Creator</div>
     </div>
     <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
-        <p>Audio Creator 是一套用于程序化地生成音频的应用软件系统。
-            它提供交互式图形界面。
-            用户可以便捷地构建声音的逻辑，并得到实时的反馈。
-            Audio Creator 的主要用途在于生成用于游戏或影视制作的音频素材。
-            相对于从现实世界中采集声音素材并使用这一传统方法，使用逻辑生成音效的优势在于可以引入参数和随机性。
-            引入参数意味着可以获得在某一范围内连续变化的声音效果。
-            例如可以开发一个生成风声音效的程序，其参数为风的强度。
-            将天气系统提供的参数作为输入即可实时生成风声。
-            注意，要使得音效逼真，显然不能只靠简单地调大音量来产生更强的风的效果。
-            强的风可能意味着更多的湍流，以及沙尘碰撞的声音。
-            随机性也可有效改善音效的自然程度。
-            例如可以生成具有随机性的脚步声，使得每一步的声音都略有不同。
+        <p>
+            Audio Creator is a software system for audio programmatically generating.
+            It provides an interactive graphical UI,
+            where users can easily construct math and logic filters and processors and get real-time feedback.
+            The main goal of developing Audio Creator is to generate audio for game or film industry.
         </p>
-        <p>Audio Creator 的另一个设计目的是验证人对声音信号包含信息认识的充分性。
-            在我看来，通常情况下，对于一个客体，终极的认识莫过于使用一套底层机制不同的系统复现它的机能。
-            举例来说，当你用钢铁、塑料和硅制作了一只能够飞行的机械鸟之后，你才能说你彻底认识了鸟类飞行的机能。
-            如果你只是观察过鸟的肌肉和骨骼、看过了鸟飞行的视频，你并不是真地了解了它是如何飞行的，你只是看到了表面。
-            对于声音信号，当你用纯数理逻辑复现了它，而不是用自然中采集的声音素材拼凑出了它的时候，你才能说你对其包含的所有必要信息有了彻底的认识。
-            对此软件的设计便是在这种想法的指导下进行的。
+        <p>
+            Compare with the traditional method that recording sound from the real world,
+            parametrically generated sound have the following advantages:
+            <ul>
+                <li>
+                    Including parameters,
+                    which means the sound can changes continuously within a certain range.
+                    For example, a program for generating wind sound can has the strength of wind as a parameter.
+                    The parameter can take a weather system's output as input and generate sound in real time.
+                    Note that to make the sound realistic, it is usually not satisfactory to simply turn up the volume to simulate stronger wind,
+                    which naturally means more turbulence and even the sound of colliding sand and dust.
+                </li>
+                <li>
+                    Containing more randomization,
+                    which improves the naturalness of sound.
+                    For example, footsteps can be generated with randomness so that each step sounds slightly different.
+                </li>
+            </ul>
         </p>
-        <p>Audio Creator 目前仍在开发中。</p>
+        <p>
+            Another purpose of designing Audio Creator is to provide a tool for verifying the adequacy or integrality of awareness of the information contained in sound.
+            In my opinion, under normal circumstances, the sign of ultimate (complete) understanding of a system is to use another system with different underlying mechanisms to reproduce the functions.
+            For example, you can't say you understand how birds flight until you've made a mechanical bird that can fly with steel, plastic, and silicon.
+            If you've just saw the muscles and bones of birds and watched a video of a bird in flight, you haven't really understood how they fly.
+            You've only understood the surface.
+            As for sound, only when you have reproduced it with pure mathematical logic,
+            instead of synthesizing it with sound collected in nature,
+            you can assert that you have a complete understanding of all the necessary information it contains.
+            The designing of Audio Creator is carried out under the guidance of this idea.
+        </p>
+        <p>Audio Creator is under developing.</p>
         <p></p><a href="audio-creator.html">See more</a></p>
     </div>
     
@@ -135,12 +151,21 @@
         </div>
     </div>
     <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
-        <p>This is a tutorial for Grasshopper beginners.
+        <p>
+            <!-- Grasshopper 是三维造型软件Rhino的一款插件，用于参数化模型构建，广泛应用于建筑设计等计算机辅助设计领域。
+            借助此软件及其现代、美观的交互式图形界面，用户可以方便地组织数学和几何逻辑，从而用一种高度程序化的方法构建三维模型。 -->
+            Grasshopper is a famous 3D modeling software, which is widely used for parametric modeling in CAD fields such as architectural design.
+            With the help of this software and its modern and beautiful interactive GUI, users can easily construct mathematical and geometric logic to build 3D models in a procedural way.
+        </p>
+        <p>
+            This is a tutorial for Grasshopper beginners.
             It contains a set of Grasshopper documents (.gh files)。
-            通过阅读这些文档，读者可以快速地掌握 Grasshopper 的使用逻辑，并获得完成简单的工作的能力。</p>
-        <p>Grasshopper 是三维造型软件Rhino的一款插件，用于参数化模型构建，广泛应用于建筑设计等计算机辅助设计领域。
-            借助此软件及其现代、美观的交互式图形界面，用户可以方便地组织数学和几何逻辑，从而用一种高度程序化的方法构建三维模型。</p>
-        <p>请到<a href="https://github.com/ShengzhiWu/GrasshopperTutorial">这里</a>获取此教程。 </p>
+            By understanding and reproducing the examples,
+            learners can quickly grasp the main logic and ideas of the workflow in Grasshopper and gain the ability to complete simple tasks.
+        </p>
+        <p>
+            Turn to <a href="https://github.com/ShengzhiWu/GrasshopperTutorial">here</a> for the tutorial.
+        </p>
     </div>
 </body>
 </html>
