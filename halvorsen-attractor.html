@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Halvorsen attractor</title>
+		<title>Halvorsen attractor 2</title>
 		<meta charset="utf-8">
 	</head>
 
@@ -193,6 +193,30 @@
 						setCameraPosition();
 						renderer.render( scene, camera );
 					}
+				});
+
+				document.addEventListener( 'touchstart', function(event) {
+					// console.log(event);
+					mouseX = event.x / window.innerWidth;
+					mouseY = event.y / window.innerHeight;
+					mouseXLast = mouseX;
+					mouseYLast = mouseY;
+				});
+
+				document.addEventListener( 'touchmove', function(event) {
+					// console.log(event);
+					mouseX = event.x / window.innerWidth;
+					mouseY = event.y / window.innerHeight;
+					const dx = mouseX-mouseXLast;
+					const dy = mouseY-mouseYLast;
+					mouseXLast = mouseX;
+					mouseYLast = mouseY;
+
+					cameraPhi += dx*4;
+					cameraTheta += dy*4;
+					cameraTheta = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraTheta));
+					setCameraPosition();
+					renderer.render( scene, camera );
 				});
 
 				document.addEventListener( 'wheel', function(event) {
