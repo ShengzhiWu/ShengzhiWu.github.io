@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Halvorsen attractor 5</title>
+		<title>Halvorsen attractor</title>
 		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width">
 	</head>
 
-	<body style="margin: 0;">
+	<body style="margin: 0; overflow: hidden;">
 		<div id="container"></div>
-		<div id="text" style="position: absolute; top: 1em; left: 1em; color: white;">Test</div>
+		<!-- <div id="text" style="position: absolute; top: 1em; left: 1em; color: white;">Test</div> -->
 
 		<script type="module">
 
@@ -199,8 +200,8 @@
 
 				document.addEventListener( 'touchstart', function(event) {
 					// console.log(event);
-					mouseX = event.touches[0].clientX/100;
-					mouseY = event.touches[0].clientY/100;
+					mouseX = event.touches[0].clientX/window.innerWidth;
+					mouseY = event.touches[0].clientY/window.innerHeight;
 					mouseXLast = mouseX;
 					mouseYLast = mouseY;
 				});
@@ -209,22 +210,21 @@
 					// console.log(event);
 					// mouseX = event.x / window.innerWidth;
 					// mouseY = event.y / window.innerHeight;
-					mouseX = event.touches[0].clientX/100;
-					text.innerHTML = mouseX;
-					mouseY = event.touches[0].clientY/100;
+					mouseX = event.touches[0].clientX/window.innerWidth;
+					// text.innerHTML = mouseX;
+					mouseY = event.touches[0].clientY/window.innerHeight;
 					const dx = mouseX-mouseXLast;
 					const dy = mouseY-mouseYLast;
 					mouseXLast = mouseX;
 					mouseYLast = mouseY;
-					console.log(mouseX);
 
-					cameraPhi += dx*1;
-					cameraTheta += dy*1;
+					cameraPhi += dx*4;
+					cameraTheta += dy*4;
 					// cameraPhi += 0.01;
 					cameraTheta = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraTheta));
 					setCameraPosition();
 					renderer.render( scene, camera );
-				});
+				}, {passive: false});
 
 				document.addEventListener( 'wheel', function(event) {
 					// console.log(event);
