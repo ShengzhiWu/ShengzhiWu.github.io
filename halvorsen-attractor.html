@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Halvorsen attractor 2</title>
+		<title>Halvorsen attractor 3</title>
 		<meta charset="utf-8">
 	</head>
 
@@ -195,18 +195,20 @@
 					}
 				});
 
-				document.addEventListener( 'touchstart', function(event) {
-					// console.log(event);
-					mouseX = event.x / window.innerWidth;
-					mouseY = event.y / window.innerHeight;
-					mouseXLast = mouseX;
-					mouseYLast = mouseY;
-				});
+				// document.addEventListener( 'touchstart', function(event) {
+				// 	// console.log(event);
+				// 	mouseX = event.x / window.innerWidth;
+				// 	mouseY = event.y / window.innerHeight;
+				// 	mouseXLast = mouseX;
+				// 	mouseYLast = mouseY;
+				// });
 
-				document.addEventListener( 'touchmove', function(event) {
+				document.addEventListener( 'touchmove', function(event) {  // Drag
 					// console.log(event);
-					mouseX = event.x / window.innerWidth;
-					mouseY = event.y / window.innerHeight;
+					// mouseX = event.x / window.innerWidth;
+					// mouseY = event.y / window.innerHeight;
+					mouseX = event.touches[0].clientX/100;
+					mouseX = event.touches[0].clientY/100;
 					const dx = mouseX-mouseXLast;
 					const dy = mouseY-mouseYLast;
 					mouseXLast = mouseX;
