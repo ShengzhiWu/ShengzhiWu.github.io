@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Dadras attractor</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width">
+	</head>
+
+	<body style="margin: 0; overflow: hidden;">
+		<div id="container"></div>
+		<!-- <div id="text" style="position: absolute; top: 1em; left: 1em; color: white;">Test</div> -->
+
+		<script>
+			const a = 8.;
+			const b = 40.;
+			const g = 14.9;
+			const ode_function = function(p)
+			{
+				const x = p[0];
+				const y = p[1];
+				const z = p[2];
+				const w = p[3];
+				return [
+					a*x-y*z+w,
+					x*z-b*y,
+					x*(y+w)-g*z,
+					-y
+				];
+			};
+
+			const start_point = [1., 1., 3., 2.];
+			const step_num = 1000000;
+			const drop_early_points_num = 10000;
+			const dt = 0.0001;
+			
+			const pointSize = 0.008;  // 0.008
+		</script>
+
+		<script src="ode-solve-visualize.js" type="module"></script>
+	</body>
+
+</html>
