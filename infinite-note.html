@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>∞ Note</title>
 </head>
 <body>
     <style>
         body {
-            touch-action: none;
+            touch-action: manipulation ;
             -webkit-user-select: none;
             user-select: none;
             /* -webkit-animation-duration: 10ms;
@@ -40,7 +40,8 @@
 
     <canvas id="drawingCanvas"></canvas>
     <button id="clearButton">Clear</button>
-    <p id="console"></p>
+    <p id="console1"></p>
+    <p id="console2"></p>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script>
     <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
@@ -49,8 +50,9 @@
 
         const canvas = document.getElementById('drawingCanvas');
         const clearButton = document.getElementById('clearButton');
-        const my_console = document.getElementById('console');
-        my_console.innerHTML = "Version 1";
+        const my_console1 = document.getElementById('console1');
+        const my_console2 = document.getElementById('console2');
+        my_console1.innerHTML = "Version 2";
         const ctx = canvas.getContext('2d');
         
         window.addEventListener('load', function() {
@@ -73,7 +75,7 @@
         ctx.strokeStyle = 'black';
 
         function startDrawing(e) {
-            my_console.innerHTML = "startDrawing";
+            my_console1.innerHTML = "startDrawing";
             e.preventDefault();
             isDrawing = true;
             ctx.beginPath();
@@ -84,7 +86,7 @@
             e.preventDefault();
             if (!isDrawing)
                 return;
-            my_console.innerHTML = "drawing";
+            my_console1.innerHTML = "drawing";
             ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
             ctx.stroke();
         }
@@ -92,7 +94,7 @@
         function stopDrawing(e) {
             e.preventDefault();
             if(isDrawing)
-                my_console.innerHTML = "stopDrawing";
+                my_console1.innerHTML = "stopDrawing";
             isDrawing = false;
             ctx.closePath();
         }
@@ -107,6 +109,13 @@
         document.addEventListener('pointerup', stopDrawing);
         document.addEventListener('pointercancel', stopDrawing);
         clearButton.addEventListener('click', clearCanvas);
+
+        // var tap_count = 0;
+        // document.addEventListener('tap', function(e) {
+        //     e.stopImmediatePropagation();
+        //     e.preventDefault();
+        //     my_console2.innerHTML = tap_countl;
+        // });
 
     </script>
 </body>
