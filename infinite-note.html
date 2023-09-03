@@ -11,9 +11,6 @@
             touch-action: none ;
             -webkit-user-select: none;
             user-select: none;
-            /* -webkit-animation-duration: 10ms;
-            -moz-animation-duration: 10ms;
-            animation-duration: 10ms; */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -26,9 +23,6 @@
             touch-action: none;
             -webkit-user-select: none;
             user-select: none;
-            /* -webkit-animation-duration: 10ms;
-            -moz-animation-duration: 10ms;
-            animation-duration: 10ms; */
             border: 2px solid black;
             cursor: crosshair;
         }
@@ -41,7 +35,7 @@
     <canvas id="drawingCanvas"></canvas>
     <button id="clearButton">Clear</button>
     <p id="console1"></p>
-    <p id="console2"></p>
+    <!-- <p id="console2"></p> -->
 
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
@@ -53,8 +47,8 @@
         const canvas = document.getElementById('drawingCanvas');
         const clearButton = document.getElementById('clearButton');
         const my_console1 = document.getElementById('console1');
-        const my_console2 = document.getElementById('console2');
-        my_console1.innerHTML = "Version 2";
+        // const my_console2 = document.getElementById('console2');
+        my_console1.innerHTML = "Version 3";
         const ctx = canvas.getContext('2d');
 
         // window.addEventListener('load', function() {
@@ -73,32 +67,32 @@
 
         var tap_count = 0;
         function startDrawing(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            my_console1.innerHTML = "startDrawing";
-            my_console2.innerHTML = tap_count++;
-            // isDrawing = true;
-            // ctx.beginPath();
-            // ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            // e.stopPropagation();
+            // e.preventDefault();
+            // my_console1.innerHTML = "startDrawing";
+            // my_console2.innerHTML = tap_count++;
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
         }
 
         function draw(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            // if (!isDrawing)
-            //     return;
+            // e.stopPropagation();
+            // e.preventDefault();
+            if (!isDrawing)
+                return;
             // my_console1.innerHTML = "drawing";
-            // ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
-            // ctx.stroke();
+            ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            ctx.stroke();
         }
 
         function stopDrawing(e) {
-            e.stopPropagation();
-            e.preventDefault();
+            // e.stopPropagation();
+            // e.preventDefault();
             // if(isDrawing)
-            //     my_console1.innerHTML = "stopDrawing";
-            // isDrawing = false;
-            // ctx.closePath();
+                // my_console1.innerHTML = "stopDrawing";
+            isDrawing = false;
+            ctx.closePath();
         }
 
         function clearCanvas() {
@@ -118,9 +112,16 @@
         //     my_console2.innerHTML = tap_countl;
         // });
 
-        $('#drawingCanvas').on('tap', ()=>
+        $('#drawingCanvas').on('pointerdown', startDrawing);
+        $('#drawingCanvas').on('pointermove', draw);
+        $('#drawingCanvas').on('pointerup', stopDrawing);
+        $('#drawingCanvas').on('pointercancel', stopDrawing);
+        $('#drawingCanvas').on('click touchend', (e)=>
         {
-            my_console2.innerHTML = tap_count++;
+            // if (e.handled === false) return;
+            e.stopPropagation();
+            e.preventDefault();
+            // e.handled = true;
         });
 
     </script>
