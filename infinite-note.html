@@ -8,7 +8,7 @@
 <body>
     <style>
         body {
-            touch-action: manipulation ;
+            touch-action: none ;
             -webkit-user-select: none;
             user-select: none;
             /* -webkit-animation-duration: 10ms;
@@ -43,8 +43,10 @@
     <p id="console1"></p>
     <p id="console2"></p>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
+
 
     <script>
 
@@ -54,14 +56,9 @@
         const my_console2 = document.getElementById('console2');
         my_console1.innerHTML = "Version 2";
         const ctx = canvas.getContext('2d');
-        
-        window.addEventListener('load', function() {
-            FastClick.attach(document.body);
-            // my_console.innerHTML = "FastClick.attach";
-        }, false);
-        
+
         // window.addEventListener('load', function() {
-        //     FastClick.attach(canvas);
+        //     FastClick.attach(document.body);
         //     // my_console.innerHTML = "FastClick.attach";
         // }, false);
 
@@ -74,41 +71,45 @@
         ctx.lineCap = 'round';
         ctx.strokeStyle = 'black';
 
+        var tap_count = 0;
         function startDrawing(e) {
-            my_console1.innerHTML = "startDrawing";
+            e.stopPropagation();
             e.preventDefault();
-            isDrawing = true;
-            ctx.beginPath();
-            ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            my_console1.innerHTML = "startDrawing";
+            my_console2.innerHTML = tap_count++;
+            // isDrawing = true;
+            // ctx.beginPath();
+            // ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
         }
 
         function draw(e) {
+            e.stopPropagation();
             e.preventDefault();
-            if (!isDrawing)
-                return;
-            my_console1.innerHTML = "drawing";
-            ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
-            ctx.stroke();
+            // if (!isDrawing)
+            //     return;
+            // my_console1.innerHTML = "drawing";
+            // ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            // ctx.stroke();
         }
 
         function stopDrawing(e) {
+            e.stopPropagation();
             e.preventDefault();
-            if(isDrawing)
-                my_console1.innerHTML = "stopDrawing";
-            isDrawing = false;
-            ctx.closePath();
+            // if(isDrawing)
+            //     my_console1.innerHTML = "stopDrawing";
+            // isDrawing = false;
+            // ctx.closePath();
         }
 
         function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        document.addEventListener('pointerdown', startDrawing);
-        document.addEventListener('pointerdoubleclick', ()=>{console.log("double click")});
-        document.addEventListener('pointermove', draw);
-        document.addEventListener('pointerup', stopDrawing);
-        document.addEventListener('pointercancel', stopDrawing);
-        clearButton.addEventListener('click', clearCanvas);
+        // document.addEventListener('pointerdown', startDrawing);
+        // document.addEventListener('pointermove', draw);
+        // document.addEventListener('pointerup', stopDrawing);
+        // document.addEventListener('pointercancel', stopDrawing);
+        // clearButton.addEventListener('click', clearCanvas);
 
         // var tap_count = 0;
         // document.addEventListener('tap', function(e) {
@@ -116,6 +117,11 @@
         //     e.preventDefault();
         //     my_console2.innerHTML = tap_countl;
         // });
+
+        $('#drawingCanvas').on('tap', ()=>
+        {
+            my_console2.innerHTML = tap_count++;
+        });
 
     </script>
 </body>
