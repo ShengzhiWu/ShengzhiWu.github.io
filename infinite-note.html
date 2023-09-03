@@ -11,9 +11,9 @@
             touch-action: none;
             -webkit-user-select: none;
             user-select: none;
-            -webkit-animation-duration: 10ms;
+            /* -webkit-animation-duration: 10ms;
             -moz-animation-duration: 10ms;
-            animation-duration: 10ms;
+            animation-duration: 10ms; */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -26,9 +26,9 @@
             touch-action: none;
             -webkit-user-select: none;
             user-select: none;
-            -webkit-animation-duration: 10ms;
+            /* -webkit-animation-duration: 10ms;
             -moz-animation-duration: 10ms;
-            animation-duration: 10ms;
+            animation-duration: 10ms; */
             border: 2px solid black;
             cursor: crosshair;
         }
@@ -42,20 +42,25 @@
     <button id="clearButton">Clear</button>
     <p id="console"></p>
 
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
-    <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
 
     <script>
 
         const canvas = document.getElementById('drawingCanvas');
         const clearButton = document.getElementById('clearButton');
         const my_console = document.getElementById('console');
-        my_console.innerHTML = "This is my console.";
+        my_console.innerHTML = "Version 1";
         const ctx = canvas.getContext('2d');
         
+        window.addEventListener('load', function() {
+            FastClick.attach(document.body);
+            // my_console.innerHTML = "FastClick.attach";
+        }, false);
+        
         // window.addEventListener('load', function() {
-        //     FastClick.attach(document.body);
-        //     my_console.innerHTML = "FastClick.attach";
+        //     FastClick.attach(canvas);
+        //     // my_console.innerHTML = "FastClick.attach";
         // }, false);
 
         let isDrawing = false;
