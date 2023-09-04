@@ -37,22 +37,34 @@
             margin-top: 10px;
             border-radius:1.5em;
             box-shadow:0.1em 0.3em 1.5em 0.0em #000000bd;
+            z-index: 2;
         }
     </style>
 
     <canvas id="drawingCanvas" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></canvas>
-    <button id="clearButton" style="position: absolute; z-index: 2; height: 3em; left: 1em; top: 1em; color: red; border: none;">Clear canvas</button>
-    <button id="penButton" style="position: absolute; z-index: 2; height: 3em; left: 20em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
-    <button id="eraserButton" style="position: absolute; z-index: 2; height: 3em; left: 25em; top: 1em; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+    <!-- <div style="position: absolute; margin: 1em;"> -->
+        <button id="clearButton" style="position: absolute; height: 3em; left: 1em; top: 1em; color: red; border: none;">Clear canvas</button>
+        <button id="penButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
+        <button id="eraserButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+        <button id="toJSONButton" style="position: absolute; height: 3em; right: 9em; top: 1em; border: none;">To JSON</button>
+        <button id="fromJSONButton" style="position: absolute; height: 3em; right: 1em; top: 1em; border: none;">From JSON</button>
+    <!-- </div> -->
     <!-- <p id="console1" style="position: absolute;"></p> -->
     <!-- <p id="console2"></p> -->
 
     <script>
+        const queryString = window.location.search;
+        const params = new URLSearchParams(queryString);
+        var document_name = params.get("name");
+        if(document_name==null)
+            document_name = "New document"
 
         const canvas = document.getElementById('drawingCanvas');
         const clearButton = document.getElementById('clearButton');
         const penButton = document.getElementById('penButton');
         const eraserButton = document.getElementById('eraserButton');
+        const toJSONButton = document.getElementById('toJSONButton');
+        const fromJSONButton = document.getElementById('fromJSONButton');
         // const my_console1 = document.getElementById('console1');
         // const my_console2 = document.getElementById('console2');
         // my_console1.innerHTML = "Version 3";
@@ -78,7 +90,7 @@
         // canvas.style.width = window.innerWidth+"px";
         // canvas.style.height = window.innerHeight+"px";
 
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3;  // Strikes thickness
         // ctx.lineCap = 'round';
         ctx.strokeStyle = 'black';
 
@@ -105,16 +117,20 @@
             });
         }
 
-        var saved_data = localStorage.getItem('strokesData');
-        if (saved_data) {
-            saved_data = JSON.parse(saved_data);
-            // console.log(saved_data);
+        function initialize_document_with_json(json)
+        {
+            const saved_data = JSON.parse(json);
+            if(saved_data["strokes"]==undefined)
+                return;
             strokes = saved_data["strokes"];
-
-            // Now, the 'numbers' variable contains the list of numbers
-            // my_console1.innerHTML = strokes_data;
-            // console.log(strokes_data);
             refresh_canvas();
+        }
+
+        // document_name = 'strokesData';
+        var saved_data = localStorage.getItem("infinite_note/"+document_name);
+        if (saved_data) {
+            // console.log(saved_data);
+            initialize_document_with_json(saved_data);
         }
 
         var last_x, last_y;
@@ -188,7 +204,8 @@
         }
 
         function startDrawing(e) {
-            // console.log(e);
+            console.log(e);
+            // ctx.lineWidth = 6*e.pressure;
 
             const x = e.clientX*window.devicePixelRatio;
             const y = e.clientY*window.devicePixelRatio;
@@ -263,12 +280,18 @@
             last_y = y;
         }
 
+        function to_json()
+        {
+            return JSON.stringify(
+            {
+                "time": new Date().getTime(),
+                "strokes": strokes
+            });
+        }
+
         function save_document(name)
         {
-            localStorage.setItem('strokesData', JSON.stringify(
-            {
-                "strokes":strokes
-            }));
+            localStorage.setItem('infinite_note/'+name, to_json());
         }
 
         function stopDrawing(e) {
@@ -290,7 +313,7 @@
                     case "eraser":
                         break;
                 }
-                save_document('strokesData');
+                save_document(document_name);
             }
         }
 
@@ -302,12 +325,37 @@
         // document.addEventListener('pointermove', draw);
         // document.addEventListener('pointerup', stopDrawing);
         // document.addEventListener('pointercancel', stopDrawing);
+
         clearButton.addEventListener('click', ()=>
         {
             // console.log("button");
             strokes = [];
             refresh_canvas();
-            save_document('strokesData');
+            save_document(document_name);
+        });
+
+        toJSONButton.addEventListener('click', ()=>
+        {
+            navigator.clipboard.writeText(to_json())
+            .then(() => {
+                console.log('Text copied to clipboard');
+            })
+            .catch((error) => {
+                console.error('Clipboard API error:', error);
+            });
+        });
+
+        fromJSONButton.addEventListener('click', ()=>
+        {
+            navigator.clipboard.readText()
+            .then((clipboardText) => {
+                console.log('Text from clipboard:', clipboardText);
+                initialize_document_with_json(clipboardText);
+                save_document(document_name);
+            })
+            .catch((error) => {
+                console.error('Clipboard API error:', error);
+            });
         });
 
         penButton.addEventListener('click', ()=>
