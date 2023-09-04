@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>∞ Note</title>
+    <link rel="icon" href="assets/icons/infinite-note.png">
+    <link rel="shortcut icon" href="assets/icons/infinite-note.png">
+    <link rel="apple-touch-icon" href="assets/icons/infinite-note.png">
+
 
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
@@ -43,7 +47,7 @@
 
     <canvas id="drawingCanvas" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></canvas>
     <!-- <div style="position: absolute; margin: 1em;"> -->
-        <button id="clearButton" style="position: absolute; height: 3em; left: 1em; top: 1em; color: red; border: none;">Clear canvas</button>
+        <button id="deleteDocumentButton" style="position: absolute; height: 3em; left: 1em; top: 1em; color: red; border: none;">Delete document</button>
         <button id="penButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
         <button id="eraserButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
         <button id="toJSONButton" style="position: absolute; height: 3em; right: 9em; top: 1em; border: none;">To JSON</button>
@@ -57,14 +61,18 @@
         const params = new URLSearchParams(queryString);
         var document_name = params.get("name");
         if(document_name==null)
-            document_name = "New document"
+        {
+            var i;
+            for(i=1;localStorage.getItem("infinite_note/Untitled note "+i);i++);
+            document_name = "Untitled note "+i;
+        }
 
         const canvas = document.getElementById('drawingCanvas');
-        const clearButton = document.getElementById('clearButton');
-        const penButton = document.getElementById('penButton');
-        const eraserButton = document.getElementById('eraserButton');
-        const toJSONButton = document.getElementById('toJSONButton');
-        const fromJSONButton = document.getElementById('fromJSONButton');
+        const delete_document_button = document.getElementById('deleteDocumentButton');
+        const pen_button = document.getElementById('penButton');
+        const eraser_button = document.getElementById('eraserButton');
+        const to_json_button = document.getElementById('toJSONButton');
+        const from_json_button = document.getElementById('fromJSONButton');
         // const my_console1 = document.getElementById('console1');
         // const my_console2 = document.getElementById('console2');
         // my_console1.innerHTML = "Version 3";
@@ -101,7 +109,7 @@
 
         function refresh_canvas()
         {
-            clearCanvas();
+            clear_canvas();
             strokes.forEach(stroke=>
             {
                 const points = stroke["points"];
@@ -294,7 +302,12 @@
             localStorage.setItem('infinite_note/'+name, to_json());
         }
 
-        function stopDrawing(e) {
+        function delete_document(name)
+        {
+            localStorage.removeItem('infinite_note/'+name);
+        }
+
+        function stop_drawing(e) {
             // e.stopPropagation();
             // e.preventDefault();
             // if(isDrawing)
@@ -317,7 +330,7 @@
             }
         }
 
-        function clearCanvas() {
+        function clear_canvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
@@ -326,15 +339,15 @@
         // document.addEventListener('pointerup', stopDrawing);
         // document.addEventListener('pointercancel', stopDrawing);
 
-        clearButton.addEventListener('click', ()=>
+        delete_document_button.addEventListener('click', ()=>
         {
             // console.log("button");
             strokes = [];
             refresh_canvas();
-            save_document(document_name);
+            delete_document(document_name);
         });
 
-        toJSONButton.addEventListener('click', ()=>
+        to_json_button.addEventListener('click', ()=>
         {
             navigator.clipboard.writeText(to_json())
             .then(() => {
@@ -345,7 +358,7 @@
             });
         });
 
-        fromJSONButton.addEventListener('click', ()=>
+        from_json_button.addEventListener('click', ()=>
         {
             navigator.clipboard.readText()
             .then((clipboardText) => {
@@ -358,24 +371,24 @@
             });
         });
 
-        penButton.addEventListener('click', ()=>
+        pen_button.addEventListener('click', ()=>
         {
             tool = "pen";
-            penButton.style.border = "3px solid white";
-            eraserButton.style.border = "3px solid rgba(0, 0, 0, 0)";
+            pen_button.style.border = "3px solid white";
+            eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
         
-        eraserButton.addEventListener('click', ()=>
+        eraser_button.addEventListener('click', ()=>
         {
             tool = "eraser";
-            eraserButton.style.border = "3px solid white";
-            penButton.style.border = "3px solid rgba(0, 0, 0, 0)";
+            eraser_button.style.border = "3px solid white";
+            pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
 
         $('#drawingCanvas').on('pointerdown', startDrawing);
         $('#drawingCanvas').on('pointermove', drag);
-        $('#drawingCanvas').on('pointerup', stopDrawing);
-        $('#drawingCanvas').on('pointercancel', stopDrawing);
+        $('#drawingCanvas').on('pointerup', stop_drawing);
+        $('#drawingCanvas').on('pointercancel', stop_drawing);
         $('#drawingCanvas').on('click touchend', (e)=>
         {
             e.stopPropagation();

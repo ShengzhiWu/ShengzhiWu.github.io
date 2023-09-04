@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>∞ Note Catalogue</title>
+    <link rel="icon" href="assets/icons/infinite-note.png">
+    <link rel="shortcut icon" href="assets/icons/infinite-note.png">
+    <link rel="apple-touch-icon" href="assets/icons/infinite-note.png">
+</head>
+<body>
+    <style>
+        table, table tr th, table tr td {border:1px solid black; padding-left: 1em; padding-right: 1em;}
+        a {text-decoration: none; color: black;}
+    </style>
+
+    <table id="catalogue" style="width: 100%; line-height: 2em; border-collapse: collapse; text-align:left; font-size:2em;"></table>
+
+    <script>
+        var table_content = "";
+        table_content += "<tr><td><a href='infinite-note.html'>+</a></td></tr>";
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if(!key.startsWith("infinite_note/"))
+                continue;
+            const name = key.substring(14);
+            console.log(name);
+            table_content += "<tr><td><a href='infinite-note.html?name="+name+"'>"+name+"</a></td></tr>";
+        }
+        document.getElementById('catalogue').innerHTML = table_content;
+    </script>
+</body>
+</html>
