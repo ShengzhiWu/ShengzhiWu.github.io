@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>∞ Note</title>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
 </head>
 <body>
     <style>
@@ -11,79 +15,260 @@
             touch-action: none ;
             -webkit-user-select: none;
             user-select: none;
-            display: flex;
-            flex-direction: column;
+            /* display: flex;
+            flex-direction: column; */
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            /* height: 100vh; */
             margin: 0;
+            padding: 0;
         }
 
         canvas {
             touch-action: none;
             -webkit-user-select: none;
             user-select: none;
-            border: 2px solid black;
-            cursor: crosshair;
+            margin: 0;
+            padding: 0;
+            /* cursor: crosshair; */
         }
 
         button {
             margin-top: 10px;
+            border-radius:1.5em;
+            box-shadow:0.1em 0.3em 1.5em 0.0em #000000bd;
         }
     </style>
 
-    <canvas id="drawingCanvas"></canvas>
-    <button id="clearButton">Clear</button>
-    <p id="console1"></p>
+    <canvas id="drawingCanvas" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></canvas>
+    <button id="clearButton" style="position: absolute; z-index: 2; height: 3em; left: 1em; top: 1em; color: red; border: none;">Clear canvas</button>
+    <button id="penButton" style="position: absolute; z-index: 2; height: 3em; left: 20em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
+    <button id="eraserButton" style="position: absolute; z-index: 2; height: 3em; left: 25em; top: 1em; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+    <!-- <p id="console1" style="position: absolute;"></p> -->
     <!-- <p id="console2"></p> -->
-
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
-
 
     <script>
 
         const canvas = document.getElementById('drawingCanvas');
         const clearButton = document.getElementById('clearButton');
-        const my_console1 = document.getElementById('console1');
+        const penButton = document.getElementById('penButton');
+        const eraserButton = document.getElementById('eraserButton');
+        // const my_console1 = document.getElementById('console1');
         // const my_console2 = document.getElementById('console2');
-        my_console1.innerHTML = "Version 3";
+        // my_console1.innerHTML = "Version 3";
+        // my_console1.innerHTML = window.devicePixelRatio;
+        canvas.width = window.innerWidth*window.devicePixelRatio;
+        canvas.height = window.innerHeight*window.devicePixelRatio;
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
 
         // window.addEventListener('load', function() {
         //     FastClick.attach(document.body);
         //     // my_console.innerHTML = "FastClick.attach";
         // }, false);
 
-        let isDrawing = false;
+        var eraser_radius = 3*window.devicePixelRatio;
 
-        canvas.width = window.innerWidth - 40;
-        canvas.height = window.innerHeight - 150;
+        var is_drawing = false;
+        var is_moving_canvas = false;
+        var tool = "pen";
 
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
+        canvas.width = window.innerWidth*window.devicePixelRatio;
+        canvas.height = window.innerHeight*window.devicePixelRatio;
+        // canvas.style.width = window.innerWidth+"px";
+        // canvas.style.height = window.innerHeight+"px";
+
+        ctx.lineWidth = 3;
+        // ctx.lineCap = 'round';
         ctx.strokeStyle = 'black';
 
-        var tap_count = 0;
+        var canvas_offset = [0, 0];
+
+        // var stroke_count = 0;
+        var strokes = [];
+
+        function refresh_canvas()
+        {
+            clearCanvas();
+            strokes.forEach(stroke=>
+            {
+                const points = stroke["points"];
+                // console.log(points);
+                ctx.beginPath();
+                ctx.moveTo(points[0][0]+canvas_offset[0], points[0][1]+canvas_offset[1]);
+                for(var i=1;i<points.length;i++)
+                {
+                    ctx.lineTo(points[i][0]+canvas_offset[0], points[i][1]+canvas_offset[1]);
+                }
+                ctx.stroke();
+                ctx.closePath();
+            });
+        }
+
+        var saved_data = localStorage.getItem('strokesData');
+        if (saved_data) {
+            saved_data = JSON.parse(saved_data);
+            // console.log(saved_data);
+            strokes = saved_data["strokes"];
+
+            // Now, the 'numbers' variable contains the list of numbers
+            // my_console1.innerHTML = strokes_data;
+            // console.log(strokes_data);
+            refresh_canvas();
+        }
+
+        var last_x, last_y;
+
+        function vector_subtract(u, v)
+        {
+            return [u[0]-v[0], u[1]-v[1]]
+        }
+
+        function vector_scale(k, v)
+        {
+            return [k*v[0], k*v[1]];
+        }
+
+        function vector_length(v)
+        {
+            return Math.sqrt(v[0]*v[0]+v[1]*v[1]);
+        }
+
+        function vector_dot(u, v)
+        {
+            return u[0]*v[0]+u[1]*v[1];
+        }
+
+        function vector_cross(u, v)
+        {
+            return u[0]*v[1]-u[1]*v[0];
+        }
+
+        function distance_to_line(x, y, line_start, line_end)
+        {
+            const p = [x, y];
+            const v = vector_subtract(line_start, line_end);
+            const l = vector_length(v);
+            const a = vector_subtract(line_start, p);
+            if(l==0.)
+                return vector_length(a);
+            const t = vector_dot(a, v)/(l*l);
+            if(t<=0.)
+                return vector_length(a);
+            const b = vector_subtract(line_end, p);
+            if(t>=1.)
+                return vector_length(b);
+            // console.log(Math.abs(vector_cross(a, b))/l);
+            return Math.abs(vector_cross(a, b))/l;
+        }
+
+        function near_line(x, y, line_start, line_end, distance)
+        {
+            return distance_to_line(x, y, line_start, line_end)<=distance;
+        }
+
+        function near_polyline(x, y, polyline, distance)
+        {
+            for(var i=1;i<polyline.length;i++)
+                if(near_line(x, y, polyline[i-1], polyline[i], distance))
+                    return true;
+            return false;
+        }
+
+        function erase(x, y)
+        {
+            for(var i=0;i<strokes.length;i++)
+            {
+                if(near_polyline(x, y, strokes[i]["points"], eraser_radius))
+                {
+                    strokes.splice(i, 1);
+                    i --;
+                } 
+            }
+        }
+
         function startDrawing(e) {
+            // console.log(e);
+
+            const x = e.clientX*window.devicePixelRatio;
+            const y = e.clientY*window.devicePixelRatio;
+            const x_on_canvas = x-canvas_offset[0];
+            const y_on_canvas = y-canvas_offset[1];
+
             // e.stopPropagation();
             // e.preventDefault();
             // my_console1.innerHTML = "startDrawing";
             // my_console2.innerHTML = tap_count++;
-            isDrawing = true;
-            ctx.beginPath();
-            ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            // my_console1.innerHTML = e.pointerType;
+            if(e.pointerType=='pen'||(e.pointerType=='mouse'&&e.button==0))
+            {
+                switch(tool)
+                {
+                    case "pen":
+                        strokes.push({"points": [[x_on_canvas, y_on_canvas]]});
+                        is_drawing = true;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        break;
+
+                    case "eraser":
+                        is_drawing = true;
+                        erase(x_on_canvas, y_on_canvas);
+                        refresh_canvas();
+                        break;
+                }
+                
+            }
+            else  // Drag canvas
+            {
+                last_x = x;
+                last_y = y;
+                is_moving_canvas = true;
+            }
         }
 
-        function draw(e) {
+        function drag(e) {
+            const x = e.clientX*window.devicePixelRatio;
+            const y = e.clientY*window.devicePixelRatio;
+            const x_on_canvas = x-canvas_offset[0];
+            const y_on_canvas = y-canvas_offset[1];
+
             // e.stopPropagation();
             // e.preventDefault();
-            if (!isDrawing)
-                return;
-            // my_console1.innerHTML = "drawing";
-            ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
-            ctx.stroke();
+            if (is_drawing)
+            {
+                // my_console1.innerHTML = "drawing";
+                switch(tool)
+                {
+                    case "pen":
+                        strokes[strokes.length-1]["points"].push([x_on_canvas, y_on_canvas]);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                        break;
+
+                    case "eraser":
+                        erase(x_on_canvas, y_on_canvas);
+                        refresh_canvas();
+                        break;
+                }
+            }
+            else if(is_moving_canvas)
+            {
+                canvas_offset[0] += x-last_x;
+                canvas_offset[1] += y-last_y;
+                refresh_canvas();
+            }
+
+            last_x = x;
+            last_y = y;
+        }
+
+        function save_document(name)
+        {
+            localStorage.setItem('strokesData', JSON.stringify(
+            {
+                "strokes":strokes
+            }));
         }
 
         function stopDrawing(e) {
@@ -91,8 +276,22 @@
             // e.preventDefault();
             // if(isDrawing)
                 // my_console1.innerHTML = "stopDrawing";
-            isDrawing = false;
-            ctx.closePath();
+            is_moving_canvas = false;
+            
+            if(is_drawing)
+            {
+                is_drawing = false;
+                switch(tool)
+                {
+                    case "pen":
+                        ctx.closePath();
+                        break;
+
+                    case "eraser":
+                        break;
+                }
+                save_document('strokesData');
+            }
         }
 
         function clearCanvas() {
@@ -103,25 +302,36 @@
         // document.addEventListener('pointermove', draw);
         // document.addEventListener('pointerup', stopDrawing);
         // document.addEventListener('pointercancel', stopDrawing);
-        // clearButton.addEventListener('click', clearCanvas);
+        clearButton.addEventListener('click', ()=>
+        {
+            // console.log("button");
+            strokes = [];
+            refresh_canvas();
+            save_document('strokesData');
+        });
 
-        // var tap_count = 0;
-        // document.addEventListener('tap', function(e) {
-        //     e.stopImmediatePropagation();
-        //     e.preventDefault();
-        //     my_console2.innerHTML = tap_countl;
-        // });
+        penButton.addEventListener('click', ()=>
+        {
+            tool = "pen";
+            penButton.style.border = "3px solid white";
+            eraserButton.style.border = "3px solid rgba(0, 0, 0, 0)";
+        });
+        
+        eraserButton.addEventListener('click', ()=>
+        {
+            tool = "eraser";
+            eraserButton.style.border = "3px solid white";
+            penButton.style.border = "3px solid rgba(0, 0, 0, 0)";
+        });
 
         $('#drawingCanvas').on('pointerdown', startDrawing);
-        $('#drawingCanvas').on('pointermove', draw);
+        $('#drawingCanvas').on('pointermove', drag);
         $('#drawingCanvas').on('pointerup', stopDrawing);
         $('#drawingCanvas').on('pointercancel', stopDrawing);
         $('#drawingCanvas').on('click touchend', (e)=>
         {
-            // if (e.handled === false) return;
             e.stopPropagation();
             e.preventDefault();
-            // e.handled = true;
         });
 
     </script>
