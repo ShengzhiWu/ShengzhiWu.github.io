@@ -50,6 +50,8 @@
         <button id="deleteDocumentButton" style="position: absolute; height: 3em; left: 1em; top: 1em; color: red; border: none;">Delete document</button>
         <button id="penButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
         <button id="eraserButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+        <button id="blackButton" style="position: absolute; width: 3em; height: 3em; left: 35em; top: 1em; background-color: black; border: 3px solid white;"></button>
+        <button id="blueButton" style="position: absolute; width: 3em; height: 3em; left: 39em; top: 1em; background-color: rgb(0, 119, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
         <button id="toJSONButton" style="position: absolute; height: 3em; right: 9em; top: 1em; border: none;">To JSON</button>
         <button id="fromJSONButton" style="position: absolute; height: 3em; right: 1em; top: 1em; border: none;">From JSON</button>
     <!-- </div> -->
@@ -66,11 +68,24 @@
             for(i=1;localStorage.getItem("infinite_note/Untitled note "+i);i++);
             document_name = "Untitled note "+i;
         }
+        // console.log(document_name);
+
+        // if (document.documentElement.requestFullscreen) {
+        // document.documentElement.requestFullscreen();
+        // } else if (document.documentElement.mozRequestFullScreen) { // Firefox
+        // document.documentElement.mozRequestFullScreen();
+        // } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari and Opera
+        // document.documentElement.webkitRequestFullscreen();
+        // } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
+        // document.documentElement.msRequestFullscreen();
+        // }
 
         const canvas = document.getElementById('drawingCanvas');
         const delete_document_button = document.getElementById('deleteDocumentButton');
         const pen_button = document.getElementById('penButton');
         const eraser_button = document.getElementById('eraserButton');
+        const black_button = document.getElementById('blackButton');
+        const blue_button = document.getElementById('blueButton');
         const to_json_button = document.getElementById('toJSONButton');
         const from_json_button = document.getElementById('fromJSONButton');
         // const my_console1 = document.getElementById('console1');
@@ -92,6 +107,7 @@
         var is_drawing = false;
         var is_moving_canvas = false;
         var tool = "pen";
+        var pen_color = "black";
 
         canvas.width = window.innerWidth*window.devicePixelRatio;
         canvas.height = window.innerHeight*window.devicePixelRatio;
@@ -112,6 +128,8 @@
             clear_canvas();
             strokes.forEach(stroke=>
             {
+                // console.log(stroke["color"]?stroke["color"]:"black")
+                ctx.strokeStyle = stroke["color"]?stroke["color"]:"black";
                 const points = stroke["points"];
                 // console.log(points);
                 ctx.beginPath();
@@ -123,6 +141,7 @@
                 ctx.stroke();
                 ctx.closePath();
             });
+            ctx.strokeStyle = pen_color;
         }
 
         function initialize_document_with_json(json)
@@ -230,7 +249,11 @@
                 switch(tool)
                 {
                     case "pen":
-                        strokes.push({"points": [[x_on_canvas, y_on_canvas]]});
+                        strokes.push(
+                        {
+                            "points": [[x_on_canvas, y_on_canvas]],
+                            "color": pen_color
+                        });
                         is_drawing = true;
                         ctx.beginPath();
                         ctx.moveTo(x, y);
@@ -383,6 +406,22 @@
             tool = "eraser";
             eraser_button.style.border = "3px solid white";
             pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+        });
+        
+        black_button.addEventListener('click', ()=>
+        {
+            pen_color = "black";
+            ctx.strokeStyle = pen_color;
+            black_button.style.border = "3px solid white";
+            blue_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+        });
+        
+        blue_button.addEventListener('click', ()=>
+        {
+            pen_color = "rgb(0, 119, 255)";
+            ctx.strokeStyle = pen_color;
+            blue_button.style.border = "3px solid white";
+            black_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
 
         $('#drawingCanvas').on('pointerdown', startDrawing);
