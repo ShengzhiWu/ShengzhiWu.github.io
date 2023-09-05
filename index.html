@@ -18,22 +18,28 @@
     <!-- Name -->
     <div style="position:relative; width:100%; height:20em; background-color: black;">
         <canvas id="canvasMain" style="position:absolute; z-index:1;"></canvas>
-        <div style="position:absolute; z-index:0; color:white;">Loading ...</div>
+        <div style="position:absolute; z-index:0;">Loading ...</div>
         <div style="position:absolute; width:50%; height:100%; left:0em; top:0em;">
             <div style="position:relative; left:0.5em; right:1em; top:2.5em; z-index:3;
-                        color:white; text-align:right; font-size: 3em;">Shengzhi Wu</div>
+                        text-align:right; font-size: 3em;">Shengzhi Wu</div>
         </div>
         <div style="position:absolute; width:50%; height:100%; right:0em; top:0em;">
             <img src="assets/shengzhiwu/shengzhiwu.jpg" height=80% title="Shengzhi Wu" alt="Shengzhi Wu" style="position:absolute;
-                    left:10%;
+                    left:20%;
                     top:5%;
                     z-index:2;
-                    border-radius:50%;
-                    box-shadow: 1em 0.5em 2em 0em rgba(0, 0, 0, 0.3);">
+                    /* border-radius:50%; */
+                    box-shadow: 1em 0.5em 2em 0em rgba(0, 0, 0, 0.4);">
         </div>
     </div>
     <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
-        <p>Graduated from University of Science and Technology of China (USTC).
+        <p>
+            I'm Shengzhi Wu (武圣智).
+            I graduated from University of Science and Technology of China (USTC).
+            Now I'm studing in National University of Singapore (NUS) for my master program.
+        </p>
+
+        <p>
             Major in math.
             Interested in math, computer science, physics and art.
         </p>
@@ -126,7 +132,8 @@
         color:white; text-align:center; font-size: 3em;">Contact</div>
     </div>
     <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
-        E-mail: wushengzhi@mail.ustc.edu.cn
+        <!-- E-mail: wushengzhi@mail.ustc.edu.cn -->
+        E-mail: e1124755@u.nus.edu
     </div>
 
     <script src="render/load-n-body-data.js"></script>
@@ -187,7 +194,7 @@
                         }
                         c[i] = .05/length(mod(a,1.)-.5);
                     }
-                    gl_FragColor = vec4(min(c, 1.0)*0.5, 1.);
+                    gl_FragColor = vec4(1.-min(c, 1.0)*0.5, 1.);
                 }
             `
             const uniforms = {
