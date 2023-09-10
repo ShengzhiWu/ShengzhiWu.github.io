@@ -78,7 +78,7 @@
     </ul>
 
     <button id="penButton" style="position: absolute; height: 3em; left: 15em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
-    <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+    <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
 
     <button id="blackButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: black; border: 3px solid white;"></button>
     <button id="redButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(255, 0, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
@@ -674,8 +674,13 @@
 
         document.getElementById('deleteDocument').addEventListener('click', ()=>
         {
+            const bo = (!document_exists(document_name))||window.confirm("Are you sure you want to delete the document?");
+            
+            if(bo)
+            {
+                delete_document(document_name);
+            }
             hide_menus();
-            delete_document(document_name);
         });
 
         document.getElementById('renameDocument').addEventListener('click', ()=>
@@ -711,9 +716,10 @@
         {
             const bo = (!document_exists(document_name))||window.confirm("This action will overwrite the contents of the current document. Are you sure that's what you want?");
             
-            setTimeout(function()
+            if(bo)
             {
-                if (bo) {
+                setTimeout(function()
+                {
                     navigator.clipboard.readText()
                     .then((clipboardText) => {
                         initialize_document_with_json(clipboardText);
@@ -722,11 +728,10 @@
                     .catch((error) => {
                         console.error('Clipboard API error:', error);
                     });
-                }
+                }, 10);
+            }
 
-                hide_menus();
-            }, 10);
-            
+            hide_menus();
             
         });
 
