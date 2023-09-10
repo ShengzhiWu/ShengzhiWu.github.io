@@ -59,16 +59,251 @@
     <!-- <p id="console2"></p> -->
 
     <script>
-        const queryString = window.location.search;
-        const params = new URLSearchParams(queryString);
-        var document_name = params.get("name");
-        if(document_name==null)
+
+        var db;  // indexedDB database
+        var document_name;
+        // var objectStore;
+        var request = indexedDB.open("infinite note");
+        request.onsuccess = function(event)
         {
-            var i;
-            for(i=1;localStorage.getItem("infinite_note/Untitled note "+i);i++);
-            document_name = "Untitled note "+i;
+            db = event.target.result;
+
+            const queryString = window.location.search;
+            const params = new URLSearchParams(queryString);
+            document_name = params.get("name");
+            if(document_name==null)
+            {
+                var i;
+                for(i=1;document_exists("Untitled note "+i);i++);
+                document_name = "Untitled note "+i;
+            }
+            console.log(document_name);
+
+            open_document(document_name);
+        };
+
+        function do_something_with_updating_version_of_database(f)
+        {
+            if(db)
+                db.close();
+            const request = indexedDB.open("infinite note");
+            request.onsuccess = function(event)
+            {
+                const db = event.target.result;
+                const version = db.version;
+                db.close();
+                const request = indexedDB.open("infinite note", version+1);
+                request.onupgradeneeded = function(event)
+                {
+                    f(event.target.result);
+                };
+                request.onsuccess = function (event) {
+                    const db = event.target.result;
+                };
+            };
+            // request.onerror = function (event) {
+            //     console.error(event.target.error);
+            // };
         }
-        // console.log(document_name);
+
+        function generate_json()
+        {
+            return JSON.stringify(
+            {
+                "time": new Date().getTime(),
+                "strokes": strokes
+            });
+        }
+
+        function document_exists_localStorage(name)
+        {
+            return localStorage.getItem("infinite_note/"+name)? true: false;
+        }
+
+        function document_exists_indexedDB(name)
+        {
+            return (db&&db.objectStoreNames.contains(name))? true: false;
+        }
+
+        function document_exists(name)
+        {
+            return document_exists_localStorage(name)||document_exists_indexedDB(name);
+        }
+
+        function open_document(name)
+        {
+            var data = localStorage.getItem("infinite_note/"+name);
+            if(data)
+            {
+                initialize_document(JSON.parse(data));
+                save_document(name);
+                return;
+            }
+
+            console.log(document_exists_indexedDB(name));
+            if(document_exists_indexedDB(name))
+            {
+                const transaction = db.transaction([name], 'readwrite');
+                const objectStore = transaction.objectStore(name);
+
+                database_item_id = 1;
+                var data = {strokes: []};
+                const cursorRequest = objectStore.openCursor();
+                cursorRequest.onsuccess = function (event) {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        database_item_id ++;
+                        const item = cursor.value;
+                        // console.log(item);
+                        switch(item.type)
+                        {
+                            case "metadata":
+                                break;
+
+                            case "stroke":
+                                delete item.type;
+                                data.strokes.push(item)
+                                break;
+                        }
+
+                        cursor.continue(); // Move to the next item
+                    } else {
+                        // console.log(database_item_id);
+                        initialize_document(data);
+                    }
+                };
+                return;
+            }
+        }
+
+        function delete_document_localStorage(name)
+        {
+            localStorage.removeItem('infinite_note/'+name);
+        }
+
+        function delete_document_indexedDB(name)
+        {
+            do_something_with_updating_version_of_database((e)=>
+            {
+                e.deleteObjectStore(name);
+                db = e;
+            });
+        }
+
+        function delete_document(name)
+        {
+            if(document_exists_localStorage(name))
+                delete_document_localStorage(name);
+
+            if(document_exists_indexedDB(name))
+                delete_document_indexedDB(name);
+        }
+
+        var database_item_id = 1;
+
+        function document_add_content(data, type)
+        {
+            data.id = database_item_id++;
+            if(!document_exists_indexedDB(document_name))
+            {
+                do_something_with_updating_version_of_database(e=>
+                {
+                    db = e;
+                    db.createObjectStore(document_name, { keyPath: 'id' });
+
+                    setTimeout(() => {
+                        const transaction = db.transaction([document_name], 'readwrite');
+                        const objectStore = transaction.objectStore(document_name);
+
+                        const item = {...data};
+                        item.type = type;
+                        const addRequest = objectStore.add(item);
+                    }, 10);
+                });
+            }
+            else
+            {
+                const item = {...data};
+                item.type = type;
+                const transaction = db.transaction([document_name], 'readwrite');
+                const objectStore = transaction.objectStore(document_name);
+                // console.log(objectStore);
+                const addRequest = objectStore.add(item);
+                addRequest.onsuccess = function (event) {
+                    // console.log('JSON data added successfully');
+                };
+                addRequest.onerror = function (event) {
+                    console.error('Error adding JSON data:', event.target.error);
+                };
+            }
+        }
+
+        function document_delete_stroke(stroke)
+        {
+            const transaction = db.transaction([document_name], 'readwrite');
+            const objectStore = transaction.objectStore(document_name);
+            const addRequest = objectStore.delete(stroke.id);
+        }
+
+        function save_to_database()
+        {
+            database_item_id = 1;
+            document_add_content(
+            {
+                type:"metadata",
+                "time": new Date().getTime()
+            }, "metadata");
+
+            strokes.forEach(e=>
+            {
+                document_add_content(e, "stroke");
+            });
+        }
+
+        function save_document(name)
+        {
+            // localStorage.setItem('infinite_note/'+name, generate_json());
+
+            if(document_exists_localStorage(name))
+                delete_document_localStorage(name)
+
+            if(!document_exists_indexedDB(name))
+            {
+                do_something_with_updating_version_of_database(e=>
+                {
+                    db = e;
+                    db.createObjectStore(name, { keyPath: 'id' });
+                    setTimeout(() => {
+                        const transaction = db.transaction([name], 'readwrite');
+                        const objectStore = transaction.objectStore(name);
+
+                        save_to_database();
+                    }, 10);
+                });
+            }
+            else
+            {
+                const transaction = db.transaction([document_name], 'readwrite');
+                const objectStore = transaction.objectStore(document_name);
+                const request = objectStore.openCursor();
+                request.onsuccess = function (event)
+                {
+                    const cursor = event.target.result;
+
+                    if(cursor)
+                    {
+                        cursor.delete();
+                        cursor.continue();
+                    }
+                    else  // Already deleted all items
+                    {
+                        save_to_database();
+                    }
+                };
+            }
+
+            
+        }
 
         // if (document.documentElement.requestFullscreen) {
         // document.documentElement.requestFullscreen();
@@ -144,20 +379,17 @@
             ctx.strokeStyle = pen_color;
         }
 
-        function initialize_document_with_json(json)
+        function initialize_document(data)
         {
-            const saved_data = JSON.parse(json);
-            if(saved_data["strokes"]==undefined)
+            if(data["strokes"]==undefined)
                 return;
-            strokes = saved_data["strokes"];
+            strokes = data["strokes"];
             refresh_canvas();
         }
 
-        // document_name = 'strokesData';
-        var saved_data = localStorage.getItem("infinite_note/"+document_name);
-        if (saved_data) {
-            // console.log(saved_data);
-            initialize_document_with_json(saved_data);
+        function initialize_document_with_json(data)
+        {
+            initialize_document(JSON.parse(data));
         }
 
         var last_x, last_y;
@@ -220,14 +452,18 @@
 
         function erase(x, y)
         {
+            var need_refresh = false;
             for(var i=0;i<strokes.length;i++)
             {
                 if(near_polyline(x, y, strokes[i]["points"], eraser_radius))
                 {
+                    document_delete_stroke(strokes[i]);
                     strokes.splice(i, 1);
                     i --;
+                    need_refresh = true;
                 } 
             }
+            return need_refresh;
         }
 
         function startDrawing(e) {
@@ -261,8 +497,9 @@
 
                     case "eraser":
                         is_drawing = true;
-                        erase(x_on_canvas, y_on_canvas);
-                        refresh_canvas();
+                        const need_refresh = erase(x_on_canvas, y_on_canvas);
+                        if(need_refresh)
+                            refresh_canvas();
                         break;
                 }
                 
@@ -295,8 +532,9 @@
                         break;
 
                     case "eraser":
-                        erase(x_on_canvas, y_on_canvas);
-                        refresh_canvas();
+                        const need_refresh = erase(x_on_canvas, y_on_canvas);
+                        if(need_refresh)
+                            refresh_canvas();
                         break;
                 }
             }
@@ -309,25 +547,6 @@
 
             last_x = x;
             last_y = y;
-        }
-
-        function to_json()
-        {
-            return JSON.stringify(
-            {
-                "time": new Date().getTime(),
-                "strokes": strokes
-            });
-        }
-
-        function save_document(name)
-        {
-            localStorage.setItem('infinite_note/'+name, to_json());
-        }
-
-        function delete_document(name)
-        {
-            localStorage.removeItem('infinite_note/'+name);
         }
 
         function stop_drawing(e) {
@@ -344,12 +563,12 @@
                 {
                     case "pen":
                         ctx.closePath();
+                        document_add_content(strokes[strokes.length-1], "stroke");
                         break;
 
                     case "eraser":
                         break;
                 }
-                save_document(document_name);
             }
         }
 
@@ -372,7 +591,7 @@
 
         to_json_button.addEventListener('click', ()=>
         {
-            navigator.clipboard.writeText(to_json())
+            navigator.clipboard.writeText(generate_json())
             .then(() => {
                 console.log('Text copied to clipboard');
             })
