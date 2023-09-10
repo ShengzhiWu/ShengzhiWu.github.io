@@ -8,9 +8,6 @@
     <link rel="shortcut icon" href="assets/icons/infinite-note.png">
     <link rel="apple-touch-icon" href="assets/icons/infinite-note.png">
 
-
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script> -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/tappy@0.3.1/dist/tappy.min.js"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
 </head>
 <body>
@@ -43,18 +40,53 @@
             box-shadow:0.1em 0.3em 1.5em 0.0em #000000bd;
             z-index: 2;
         }
+
+        .submenu {
+            display: none;
+            position: absolute;
+            margin: 0;
+            padding-left: 1em;
+            padding-right: 1em;
+            padding-top: 0;
+            padding-bottom: 0;
+            list-style-type: none;
+            background-color: white;
+            box-shadow:0.1em 0.3em 1.5em 0.0em #000000bd;
+            border-radius: 0.5em;
+            border-top-left-radius: 0;
+            z-index: 3;
+        }
+
+        .submenu li {
+            line-height: 3em;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .submenu li:last-child {
+            border-bottom: none; /* Remove the border from the last list item */
+        }
     </style>
 
     <canvas id="drawingCanvas" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></canvas>
-    <!-- <div style="position: absolute; margin: 1em;"> -->
-        <button id="deleteDocumentButton" style="position: absolute; height: 3em; left: 1em; top: 1em; color: red; border: none;">Delete document</button>
-        <button id="penButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
-        <button id="eraserButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
-        <button id="blackButton" style="position: absolute; width: 3em; height: 3em; left: 35em; top: 1em; background-color: black; border: 3px solid white;"></button>
-        <button id="blueButton" style="position: absolute; width: 3em; height: 3em; left: 39em; top: 1em; background-color: rgb(0, 119, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
-        <button id="toJSONButton" style="position: absolute; height: 3em; right: 9em; top: 1em; border: none;">To JSON</button>
-        <button id="fromJSONButton" style="position: absolute; height: 3em; right: 1em; top: 1em; border: none;">From JSON</button>
-    <!-- </div> -->
+
+    <button id="fileButton" style="position: absolute; height: 3em; left: 1em; top: 1em; border: none;">Document ▼</button>
+    <ul class="submenu" id="fileMenu">
+        <li id="deleteDocument">Delete document</li>
+        <li id="renameDocument">Rename document</li>
+        <li id="fromJSON">From JSON</li>
+        <li id="toJSON">To JSON</li>
+    </ul>
+
+    <button id="penButton" style="position: absolute; height: 3em; left: 15em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
+    <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 183, 183); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+
+    <button id="blackButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: black; border: 3px solid white;"></button>
+    <button id="redButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(255, 0, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="yellowButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(255, 230, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="greenButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(53, 226, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="blueButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(0, 119, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="purpleButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(162, 0, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    
     <!-- <p id="console1" style="position: absolute;"></p> -->
     <!-- <p id="console2"></p> -->
 
@@ -140,7 +172,7 @@
                 return;
             }
 
-            console.log(document_exists_indexedDB(name));
+            // console.log(document_exists_indexedDB(name));
             if(document_exists_indexedDB(name))
             {
                 const transaction = db.transaction([name], 'readwrite');
@@ -152,8 +184,8 @@
                 cursorRequest.onsuccess = function (event) {
                     const cursor = event.target.result;
                     if (cursor) {
-                        database_item_id ++;
                         const item = cursor.value;
+                        database_item_id = Math.max(database_item_id, item.id+1);
                         // console.log(item);
                         switch(item.type)
                         {
@@ -190,13 +222,47 @@
             });
         }
 
-        function delete_document(name)
+        function delete_document()
         {
-            if(document_exists_localStorage(name))
-                delete_document_localStorage(name);
+            strokes = [];
+            refresh_canvas();
 
-            if(document_exists_indexedDB(name))
-                delete_document_indexedDB(name);
+            if(document_exists_localStorage(document_name))
+                delete_document_localStorage(document_name);
+
+            if(document_exists_indexedDB(document_name))
+                delete_document_indexedDB(document_name);
+        }
+
+        function rename_document(new_name)
+        {
+            do_something_with_updating_version_of_database(e=>
+            {
+                db = e;
+                db.createObjectStore(new_name, { keyPath: 'id' });
+
+                setTimeout(() => {
+                    const transaction = db.transaction([document_name, new_name], 'readwrite');
+                    const oldObjectStore = transaction.objectStore(document_name);
+                    const newObjectStore = transaction.objectStore(new_name);
+
+                    const cursorRequest = oldObjectStore.openCursor();
+
+                    cursorRequest.onsuccess = function (event) {
+                        const cursor = event.target.result;
+
+                        if (cursor) {
+                            newObjectStore.add(cursor.value);
+                            cursor.continue();
+                        }
+                    };
+
+                    transaction.oncomplete = function () {
+                        delete_document_indexedDB(document_name);
+                        document_name = new_name;
+                    };
+                }, 10);
+            });
         }
 
         var database_item_id = 1;
@@ -301,41 +367,19 @@
                     }
                 };
             }
-
-            
         }
 
-        // if (document.documentElement.requestFullscreen) {
-        // document.documentElement.requestFullscreen();
-        // } else if (document.documentElement.mozRequestFullScreen) { // Firefox
-        // document.documentElement.mozRequestFullScreen();
-        // } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari and Opera
-        // document.documentElement.webkitRequestFullscreen();
-        // } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
-        // document.documentElement.msRequestFullscreen();
-        // }
-
         const canvas = document.getElementById('drawingCanvas');
-        const delete_document_button = document.getElementById('deleteDocumentButton');
-        const pen_button = document.getElementById('penButton');
-        const eraser_button = document.getElementById('eraserButton');
-        const black_button = document.getElementById('blackButton');
-        const blue_button = document.getElementById('blueButton');
-        const to_json_button = document.getElementById('toJSONButton');
-        const from_json_button = document.getElementById('fromJSONButton');
+
         // const my_console1 = document.getElementById('console1');
         // const my_console2 = document.getElementById('console2');
         // my_console1.innerHTML = "Version 3";
         // my_console1.innerHTML = window.devicePixelRatio;
+
         canvas.width = window.innerWidth*window.devicePixelRatio;
         canvas.height = window.innerHeight*window.devicePixelRatio;
         const ctx = canvas.getContext('2d');
         ctx.imageSmoothingEnabled = true;
-
-        // window.addEventListener('load', function() {
-        //     FastClick.attach(document.body);
-        //     // my_console.innerHTML = "FastClick.attach";
-        // }, false);
 
         var eraser_radius = 3*window.devicePixelRatio;
 
@@ -469,6 +513,8 @@
         function startDrawing(e) {
             console.log(e);
             // ctx.lineWidth = 6*e.pressure;
+            
+            hide_menus();
 
             const x = e.clientX*window.devicePixelRatio;
             const y = e.clientY*window.devicePixelRatio;
@@ -581,16 +627,77 @@
         // document.addEventListener('pointerup', stopDrawing);
         // document.addEventListener('pointercancel', stopDrawing);
 
-        delete_document_button.addEventListener('click', ()=>
+        function put_under_an_element(element_to_put, reference_element, offset)
         {
-            // console.log("button");
-            strokes = [];
-            refresh_canvas();
+            const bounding = reference_element.getBoundingClientRect();
+            element_to_put.style.left = bounding.left+offset[0]+"px";
+            element_to_put.style.top = bounding.bottom+offset[1]+"px";
+        }
+
+        const file_menu = document.getElementById('fileMenu');
+        const pen_button = document.getElementById('penButton');
+        const eraser_button = document.getElementById('eraserButton');
+        const color_buttons =
+        [
+            document.getElementById('blackButton'),
+            document.getElementById('redButton'),
+            document.getElementById('yellowButton'),
+            document.getElementById('greenButton'),
+            document.getElementById('blueButton'),
+            document.getElementById('purpleButton')
+        ];
+        const colors = [
+            "black",
+            "rgb(255, 0, 0)",
+            "rgb(255, 230, 0)",
+            "rgb(53, 226, 0)",
+            "rgb(0, 119, 255)",
+            "rgb(162, 0, 255)"
+        ];
+        const file_button = document.getElementById('fileButton');
+
+        function hide_menus()
+        {
+            file_menu.style.display = "none";
+        }
+
+        file_button.addEventListener('click', ()=>
+        {
+            const displaying = file_menu.style.display=="block";
+            hide_menus();
+            if(!displaying)
+            {
+                put_under_an_element(file_menu, file_button, [10, 10]);
+                file_menu.style.display = "block";
+            }
+        });
+
+        document.getElementById('deleteDocument').addEventListener('click', ()=>
+        {
+            hide_menus();
             delete_document(document_name);
         });
 
-        to_json_button.addEventListener('click', ()=>
+        document.getElementById('renameDocument').addEventListener('click', ()=>
         {
+            const userInput = prompt("New name:");
+
+            if (userInput !== null) {
+                if(document_exists(userInput))
+                    window.alert('Renaming failed because document with that name already exists.');
+                else
+                {
+                    if(document_exists(document_name))
+                        rename_document(userInput);
+                    else  // The document is currently empty.
+                        document_name = userInput;
+                }
+            }
+        });
+
+        document.getElementById('toJSON').addEventListener('click', ()=>
+        {
+            hide_menus();
             navigator.clipboard.writeText(generate_json())
             .then(() => {
                 console.log('Text copied to clipboard');
@@ -600,21 +707,32 @@
             });
         });
 
-        from_json_button.addEventListener('click', ()=>
+        document.getElementById('fromJSON').addEventListener('click', ()=>
         {
-            navigator.clipboard.readText()
-            .then((clipboardText) => {
-                console.log('Text from clipboard:', clipboardText);
-                initialize_document_with_json(clipboardText);
-                save_document(document_name);
-            })
-            .catch((error) => {
-                console.error('Clipboard API error:', error);
-            });
+            const bo = (!document_exists(document_name))||window.confirm("This action will overwrite the contents of the current document. Are you sure that's what you want?");
+            
+            setTimeout(function()
+            {
+                if (bo) {
+                    navigator.clipboard.readText()
+                    .then((clipboardText) => {
+                        initialize_document_with_json(clipboardText);
+                        save_document(document_name);
+                    })
+                    .catch((error) => {
+                        console.error('Clipboard API error:', error);
+                    });
+                }
+
+                hide_menus();
+            }, 10);
+            
+            
         });
 
         pen_button.addEventListener('click', ()=>
         {
+            hide_menus();
             tool = "pen";
             pen_button.style.border = "3px solid white";
             eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
@@ -622,26 +740,28 @@
         
         eraser_button.addEventListener('click', ()=>
         {
+            hide_menus();
             tool = "eraser";
             eraser_button.style.border = "3px solid white";
             pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
-        
-        black_button.addEventListener('click', ()=>
+
+        for(var i=0; i<color_buttons.length; i++)
         {
-            pen_color = "black";
-            ctx.strokeStyle = pen_color;
-            black_button.style.border = "3px solid white";
-            blue_button.style.border = "3px solid rgba(0, 0, 0, 0)";
-        });
-        
-        blue_button.addEventListener('click', ()=>
-        {
-            pen_color = "rgb(0, 119, 255)";
-            ctx.strokeStyle = pen_color;
-            blue_button.style.border = "3px solid white";
-            black_button.style.border = "3px solid rgba(0, 0, 0, 0)";
-        });
+            color_buttons[i].style.left = 30+4*i+"em";
+
+            const i_const = i;
+            color_buttons[i].addEventListener('click', ()=>
+            {
+                hide_menus();
+                pen_color = colors[i_const];
+                ctx.strokeStyle = pen_color;
+                color_buttons[i_const].style.border = "3px solid white";
+                for(var j=0; j<color_buttons.length; j++)
+                    if(j!=i_const)
+                        color_buttons[j].style.border = "3px solid rgba(0, 0, 0, 0)";
+            });
+        }
 
         $('#drawingCanvas').on('pointerdown', startDrawing);
         $('#drawingCanvas').on('pointermove', drag);
