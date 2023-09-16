@@ -20,6 +20,7 @@
             justify-content: center;
             margin: 0;
             padding: 0;
+            background-color: white;
         }
 
         canvas {
@@ -28,6 +29,7 @@
             user-select: none;
             margin: 0;
             padding: 0;
+            background-color: white;
         }
 
         button {
@@ -65,7 +67,7 @@
 
     <canvas id="drawingCanvas" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></canvas>
 
-    <p id="state" style="position: absolute; left: 1em; bottom: 0em; color: red; opacity: 1;"></p>
+    <p id="state" style="z-index: 2; position: absolute; left: 1em; bottom: 0em; color: red; opacity: 1;"></p>
     
     <button id="fileButton" style="position: absolute; height: 3em; left: 1em; top: 1em; border: none;">
         <img src="assets\infinite-note\document.svg" alt="Document" style="height: 2.5em;"></svg>
@@ -78,13 +80,13 @@
         <li id="toJSON">To JSON</li>
     </ul>
 
-    <button id="penButton" style="position: absolute; height: 3em; left: 15em; top: 1em; color: white; background-color: black; border: 3px solid white;">
+    <button id="penButton" style="position: absolute; width: 3em; height: 3em; left: 15em; top: 1em; padding: 0; color: white; background-color: black; border: 3px solid white;">
         <img src="assets\infinite-note\pen.svg" alt="Pen" style="height: 2.5em;"></svg>
     </button>
-    <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="eraserButton" style="position: absolute; width: 3em; height: 3em; left: 20em; top: 1em; padding: 0; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\eraser.svg" alt="Eraser" style="height: 2.5em;"></svg>
     </button>
-    <button id="splitVerticallyButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="splitVerticallyButton" style="position: absolute; width: 3em; height: 3em; left: 25em; top: 1em; padding: 0; color: black; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
     </button>
 
@@ -146,7 +148,7 @@
 
                 state_bar.innerHTML = "Document save failed.";
                 state_bar.style.color = bad_state_color;
-                show_state();
+                show_state_bar();
                 succeed_state_showed = false;
             };
         }
@@ -303,7 +305,7 @@
                                 succeed_state_showed = true;
                                 state_bar.innerHTML = "Successfully saved.";
                                 state_bar.style.color = good_state_color;
-                                show_state();
+                                show_state_bar();
                             }
                         };
                         addRequest.onerror = function (event) {
@@ -311,7 +313,7 @@
                         
                             state_bar.innerHTML = "Document save failed.";
                             state_bar.style.color = bad_state_color;
-                            show_state();
+                            show_state_bar();
                             succeed_state_showed = false;
                         };
                     }, 10);
@@ -331,7 +333,7 @@
                         succeed_state_showed = true;
                         state_bar.innerHTML = "Successfully saved.";
                         state_bar.style.color = good_state_color;
-                        show_state();
+                        show_state_bar();
                     }
                 };
                 addRequest.onerror = function (event) {
@@ -339,7 +341,7 @@
                 
                     state_bar.innerHTML = "Document save failed.";
                     state_bar.style.color = bad_state_color;
-                    show_state();
+                    show_state_bar();
                     succeed_state_showed = false;
                 };
             }
@@ -363,7 +365,7 @@
                 
                     state_bar.innerHTML = "Document save failed.";
                     state_bar.style.color = bad_state_color;
-                    show_state();
+                    show_state_bar();
                     succeed_state_showed = false;
                 };
             });
@@ -476,9 +478,9 @@
             // Reference lines
             ctx.strokeStyle = "#999999";
             ctx.lineWidth = 1;
-            ctx.setLineDash([4, 10]);
+            ctx.setLineDash([4*window.devicePixelRatio, 10*window.devicePixelRatio]);
             ctx.beginPath();
-            ctx.moveTo(Math.round(canvas_offset[0])+0.5, canvas_offset[1]%14/*period of dashed line*/-14);
+            ctx.moveTo(Math.round(canvas_offset[0])+0.5, canvas_offset[1]%(14*window.devicePixelRatio)/*period of dashed line*/-14*window.devicePixelRatio);
             ctx.lineTo(Math.round(canvas_offset[0])+0.5, canvas.height);
             ctx.stroke();
             ctx.closePath();
@@ -675,11 +677,12 @@
             }
         }
 
-        function move(e) {
+        function pointer_move(e) {
             const x = e.clientX*window.devicePixelRatio;
             const y = e.clientY*window.devicePixelRatio;
             const x_on_canvas = x-canvas_offset[0];
             const y_on_canvas = y-canvas_offset[1];
+            const movement_y = y-mouse_y;
 
             mouse_x = x;
             mouse_y = y;
@@ -704,14 +707,16 @@
                         break;
 
                     case "split vertically":
+                        // state_bar.innerHTML = e.movementY;
+                        // show_state_bar();
                         operation_details.strokes_below.forEach(stroke=>
                         {
                             stroke.points.forEach(point=>
                             {
-                                point[1] += e.movementY;
+                                point[1] += movement_y;
                             });
                         });
-                        if(operation_details.strokes_below.length>0&&e.movementY!=0)
+                        if(movement_y!=0)
                             refresh_canvas();
                         break;
                 }
@@ -854,7 +859,7 @@
                 
                 state_bar.innerHTML = "Document save failed.";
                 state_bar.style.color = bad_state_color;
-                show_state();
+                show_state_bar();
                 succeed_state_showed = false;
             });
         });
@@ -877,7 +882,7 @@
                         
                         state_bar.innerHTML = "Document save failed.";
                         state_bar.style.color = bad_state_color;
-                        show_state();
+                        show_state_bar();
                         succeed_state_showed = false;
                     });
                 }, 10);
@@ -932,7 +937,7 @@
         }
 
         $('#drawingCanvas').on('pointerdown', startDrawing);
-        $('#drawingCanvas').on('pointermove', move);
+        $('#drawingCanvas').on('pointermove', pointer_move);
         $('#drawingCanvas').on('pointerup', stop_drawing);
         $('#drawingCanvas').on('pointercancel', stop_drawing);
         $('#drawingCanvas').on('click touchend', (e)=>
@@ -971,7 +976,7 @@
 
         var succeed_state_showed = false;
 
-        function show_state()
+        function show_state_bar()
         {
             state_bar.style.opacity = 1;
             if(!state_fading_out)
