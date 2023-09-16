@@ -16,11 +16,8 @@
             touch-action: none ;
             -webkit-user-select: none;
             user-select: none;
-            /* display: flex;
-            flex-direction: column; */
             align-items: center;
             justify-content: center;
-            /* height: 100vh; */
             margin: 0;
             padding: 0;
         }
@@ -31,7 +28,6 @@
             user-select: none;
             margin: 0;
             padding: 0;
-            /* cursor: crosshair; */
         }
 
         button {
@@ -69,7 +65,12 @@
 
     <canvas id="drawingCanvas" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></canvas>
 
-    <button id="fileButton" style="position: absolute; height: 3em; left: 1em; top: 1em; border: none;">Document ▼</button>
+    <p id="state" style="position: absolute; left: 1em; bottom: 0em; color: red; opacity: 1;"></p>
+    
+    <button id="fileButton" style="position: absolute; height: 3em; left: 1em; top: 1em; border: none;">
+        <img src="assets\infinite-note\document.svg" alt="Document" style="height: 2.5em;"></svg>
+        ▼
+    </button>
     <ul class="submenu" id="fileMenu">
         <li id="deleteDocument">Delete document</li>
         <li id="renameDocument">Rename document</li>
@@ -77,8 +78,15 @@
         <li id="toJSON">To JSON</li>
     </ul>
 
-    <button id="penButton" style="position: absolute; height: 3em; left: 15em; top: 1em; color: white; background-color: black; border: 3px solid white;">Pen</button>
-    <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">Eraser</button>
+    <button id="penButton" style="position: absolute; height: 3em; left: 15em; top: 1em; color: white; background-color: black; border: 3px solid white;">
+        <img src="assets\infinite-note\pen.svg" alt="Pen" style="height: 2.5em;"></svg>
+    </button>
+    <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
+        <img src="assets\infinite-note\eraser.svg" alt="Eraser" style="height: 2.5em;"></svg>
+    </button>
+    <button id="insertHorizontalSpaceButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
+        <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
+    </button>
 
     <button id="blackButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: black; border: 3px solid white;"></button>
     <button id="redButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(255, 0, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
@@ -133,9 +141,13 @@
                     const db = event.target.result;
                 };
             };
-            // request.onerror = function (event) {
-            //     console.error(event.target.error);
-            // };
+            request.onerror = function (event) {
+                console.error(event.target.error);
+
+                state_bar.innerHTML = "Document save failed.";
+                state_bar.style.color = "red";
+                show_state();
+            };
         }
 
         function generate_json()
@@ -295,13 +307,38 @@
                 const objectStore = transaction.objectStore(document_name);
                 // console.log(objectStore);
                 const addRequest = objectStore.add(item);
-                addRequest.onsuccess = function (event) {
-                    // console.log('JSON data added successfully');
-                };
+                addRequest.onsuccess = function (event) {};
                 addRequest.onerror = function (event) {
                     console.error('Error adding JSON data:', event.target.error);
+                
+                    state_bar.innerHTML = "Document save failed.";
+                    state_bar.style.color = "red";
+                    show_state();
                 };
             }
+        }
+
+        function document_edit_contents(data, type)
+        {
+            if(!document_exists_indexedDB(document_name))
+                return;
+
+            const transaction = db.transaction([document_name], 'readwrite');
+            const objectStore = transaction.objectStore(document_name);
+            data.forEach(e=>
+            {
+                const item = {...e};
+                item.type = type;
+                const addRequest = objectStore.put(item);
+                addRequest.onsuccess = function (event) {};
+                addRequest.onerror = function (event) {
+                    console.error('Error adding JSON data:', event.target.error);
+                
+                    state_bar.innerHTML = "Document save failed.";
+                    state_bar.style.color = "red";
+                    show_state();
+                };
+            });
         }
 
         function document_delete_stroke(stroke)
@@ -387,6 +424,7 @@
         var is_moving_canvas = false;
         var tool = "pen";
         var pen_color = "black";
+        var operation_details;
 
         canvas.width = window.innerWidth*window.devicePixelRatio;
         canvas.height = window.innerHeight*window.devicePixelRatio;
@@ -397,7 +435,7 @@
         // ctx.lineCap = 'round';
         ctx.strokeStyle = 'black';
 
-        var canvas_offset = [0, 0];
+        var canvas_offset = [Math.round(canvas.width*0.1)+0.5, 0.5];
 
         // var stroke_count = 0;
         var strokes = [];
@@ -405,6 +443,20 @@
         function refresh_canvas()
         {
             clear_canvas();
+
+            ctx.strokeStyle = "gray";
+            ctx.lineWidth = 1;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(Math.round(canvas_offset[0])+0.5, 0);
+            ctx.lineTo(Math.round(canvas_offset[0])+0.5, canvas.height);
+            ctx.stroke();
+            ctx.closePath();
+            ctx.setLineDash([]);
+            ctx.lineWidth = 3;
+
+            ctx.miterLimit = 2;
+
             strokes.forEach(stroke=>
             {
                 // console.log(stroke["color"]?stroke["color"]:"black")
@@ -511,7 +563,7 @@
         }
 
         function startDrawing(e) {
-            console.log(e);
+            // console.log(e);
             // ctx.lineWidth = 6*e.pressure;
             
             hide_menus();
@@ -546,6 +598,19 @@
                         const need_refresh = erase(x_on_canvas, y_on_canvas);
                         if(need_refresh)
                             refresh_canvas();
+                        break;
+
+                    case "insert horizontal space":
+                        is_drawing = true;
+                        operation_details =
+                        {
+                            strokes_below: []
+                        };
+                        strokes.forEach(stroke=>
+                        {
+                            if(stroke.points[0][1]>=y_on_canvas)
+                                operation_details.strokes_below.push(stroke);
+                        });
                         break;
                 }
                 
@@ -582,6 +647,18 @@
                         if(need_refresh)
                             refresh_canvas();
                         break;
+
+                    case "insert horizontal space":
+                        operation_details.strokes_below.forEach(stroke=>
+                        {
+                            stroke.points.forEach(point=>
+                            {
+                                point[1] += e.movementY;
+                            });
+                        });
+                        if(operation_details.strokes_below.length>0&&e.movementY!=0)
+                            refresh_canvas();
+                        break;
                 }
             }
             else if(is_moving_canvas)
@@ -614,6 +691,10 @@
 
                     case "eraser":
                         break;
+
+                    case "insert horizontal space":
+                        document_edit_contents(operation_details.strokes_below, "stroke");
+                        break;
                 }
             }
         }
@@ -637,6 +718,7 @@
         const file_menu = document.getElementById('fileMenu');
         const pen_button = document.getElementById('penButton');
         const eraser_button = document.getElementById('eraserButton');
+        const insert_horizontal_space_button = document.getElementById('insertHorizontalSpaceButton');
         const color_buttons =
         [
             document.getElementById('blackButton'),
@@ -687,7 +769,8 @@
         {
             const userInput = prompt("New name:");
 
-            if (userInput !== null) {
+            if (userInput !== null)
+            {
                 if(document_exists(userInput))
                     window.alert('Renaming failed because document with that name already exists.');
                 else
@@ -698,6 +781,8 @@
                         document_name = userInput;
                 }
             }
+            
+            hide_menus();
         });
 
         document.getElementById('toJSON').addEventListener('click', ()=>
@@ -709,6 +794,10 @@
             })
             .catch((error) => {
                 console.error('Clipboard API error:', error);
+                
+                state_bar.innerHTML = "Document save failed.";
+                state_bar.style.color = "red";
+                show_state();
             });
         });
 
@@ -727,6 +816,10 @@
                     })
                     .catch((error) => {
                         console.error('Clipboard API error:', error);
+                        
+                        state_bar.innerHTML = "Document save failed.";
+                        state_bar.style.color = "red";
+                        show_state();
                     });
                 }, 10);
             }
@@ -741,19 +834,30 @@
             tool = "pen";
             pen_button.style.border = "3px solid white";
             eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+            insert_horizontal_space_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
         
         eraser_button.addEventListener('click', ()=>
         {
             hide_menus();
             tool = "eraser";
-            eraser_button.style.border = "3px solid white";
             pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+            eraser_button.style.border = "3px solid white";
+            insert_horizontal_space_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+        });
+        
+        insert_horizontal_space_button.addEventListener('click', ()=>
+        {
+            hide_menus();
+            tool = "insert horizontal space";
+            pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+            eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+            insert_horizontal_space_button.style.border = "3px solid white";
         });
 
         for(var i=0; i<color_buttons.length; i++)
         {
-            color_buttons[i].style.left = 30+4*i+"em";
+            color_buttons[i].style.left = 35+4*i+"em";
 
             const i_const = i;
             color_buttons[i].addEventListener('click', ()=>
@@ -777,6 +881,44 @@
             e.stopPropagation();
             e.preventDefault();
         });
+
+        var state_fading_out = false;
+
+        function fade_out(element, waiting_time, fading_out_speed, on_finished)
+        {
+            if(waiting_time>0)
+                setTimeout((function()
+                {
+                    fade_out(element, 0, fading_out_speed, on_finished);
+                }), waiting_time);
+            else
+            {
+                const opacity = Math.max(0, element.style.opacity-fading_out_speed*0.03);
+                element.style.opacity = opacity;
+                if(opacity>0)
+                    setTimeout((function()
+                    {
+                        fade_out(element, 0, fading_out_speed, on_finished);
+                    }), 30);
+                else
+                    if(on_finished)
+                        on_finished();
+            }
+
+        }
+
+        function show_state()
+        {
+            const state = document.getElementById('state');
+            state.style.opacity = 1;
+            if(!state_fading_out)
+            {
+                state_fading_out = true;
+                fade_out(document.getElementById('state'), 2000, 0.3, ()=>{
+                    state_fading_out = false;
+                });
+            }
+        }
 
     </script>
 </body>
