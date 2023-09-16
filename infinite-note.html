@@ -84,7 +84,7 @@
     <button id="eraserButton" style="position: absolute; height: 3em; left: 20em; top: 1em; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\eraser.svg" alt="Eraser" style="height: 2.5em;"></svg>
     </button>
-    <button id="insertHorizontalSpaceButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="splitVerticallyButton" style="position: absolute; height: 3em; left: 25em; top: 1em; color: black; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
     </button>
 
@@ -145,8 +145,9 @@
                 console.error(event.target.error);
 
                 state_bar.innerHTML = "Document save failed.";
-                state_bar.style.color = "red";
+                state_bar.style.color = bad_state_color;
                 show_state();
+                succeed_state_showed = false;
             };
         }
 
@@ -296,6 +297,23 @@
                         const item = {...data};
                         item.type = type;
                         const addRequest = objectStore.add(item);
+                        addRequest.onsuccess = function (event) {
+                            if(!succeed_state_showed)
+                            {
+                                succeed_state_showed = true;
+                                state_bar.innerHTML = "Successfully saved.";
+                                state_bar.style.color = good_state_color;
+                                show_state();
+                            }
+                        };
+                        addRequest.onerror = function (event) {
+                            console.error('Error adding JSON data:', event.target.error);
+                        
+                            state_bar.innerHTML = "Document save failed.";
+                            state_bar.style.color = bad_state_color;
+                            show_state();
+                            succeed_state_showed = false;
+                        };
                     }, 10);
                 });
             }
@@ -307,13 +325,22 @@
                 const objectStore = transaction.objectStore(document_name);
                 // console.log(objectStore);
                 const addRequest = objectStore.add(item);
-                addRequest.onsuccess = function (event) {};
+                addRequest.onsuccess = function (event) {
+                    if(!succeed_state_showed)
+                    {
+                        succeed_state_showed = true;
+                        state_bar.innerHTML = "Successfully saved.";
+                        state_bar.style.color = good_state_color;
+                        show_state();
+                    }
+                };
                 addRequest.onerror = function (event) {
                     console.error('Error adding JSON data:', event.target.error);
                 
                     state_bar.innerHTML = "Document save failed.";
-                    state_bar.style.color = "red";
+                    state_bar.style.color = bad_state_color;
                     show_state();
+                    succeed_state_showed = false;
                 };
             }
         }
@@ -335,8 +362,9 @@
                     console.error('Error adding JSON data:', event.target.error);
                 
                     state_bar.innerHTML = "Document save failed.";
-                    state_bar.style.color = "red";
+                    state_bar.style.color = bad_state_color;
                     show_state();
+                    succeed_state_showed = false;
                 };
             });
         }
@@ -420,6 +448,7 @@
 
         var eraser_radius = 3*window.devicePixelRatio;
 
+        var mouse_x, mouse_y;
         var is_drawing = false;
         var is_moving_canvas = false;
         var tool = "pen";
@@ -444,19 +473,37 @@
         {
             clear_canvas();
 
-            ctx.strokeStyle = "gray";
+            // Reference lines
+            ctx.strokeStyle = "#999999";
             ctx.lineWidth = 1;
-            ctx.setLineDash([8, 8]);
+            ctx.setLineDash([4, 10]);
             ctx.beginPath();
-            ctx.moveTo(Math.round(canvas_offset[0])+0.5, 0);
+            ctx.moveTo(Math.round(canvas_offset[0])+0.5, canvas_offset[1]%14/*period of dashed line*/-14);
             ctx.lineTo(Math.round(canvas_offset[0])+0.5, canvas.height);
             ctx.stroke();
             ctx.closePath();
+            if(is_drawing)
+                switch(tool)
+                {
+                    case "split vertically":
+                        ctx.beginPath();
+                        ctx.moveTo(0, operation_details.start_y+0.5);
+                        ctx.lineTo(canvas.width, operation_details.start_y+0.5);
+                        ctx.stroke();
+                        ctx.closePath();
+
+                        ctx.beginPath();
+                        ctx.moveTo(0, mouse_y+0.5);
+                        ctx.lineTo(canvas.width, mouse_y+0.5);
+                        ctx.stroke();
+                        ctx.closePath();
+                        break;
+                }
+
+            // Strokes
             ctx.setLineDash([]);
             ctx.lineWidth = 3;
-
             ctx.miterLimit = 2;
-
             strokes.forEach(stroke=>
             {
                 // console.log(stroke["color"]?stroke["color"]:"black")
@@ -573,6 +620,9 @@
             const x_on_canvas = x-canvas_offset[0];
             const y_on_canvas = y-canvas_offset[1];
 
+            mouse_x = x;
+            mouse_y = y;
+
             // e.stopPropagation();
             // e.preventDefault();
             // my_console1.innerHTML = "startDrawing";
@@ -600,17 +650,19 @@
                             refresh_canvas();
                         break;
 
-                    case "insert horizontal space":
+                    case "split vertically":
                         is_drawing = true;
                         operation_details =
                         {
-                            strokes_below: []
+                            strokes_below: [],
+                            start_y: y
                         };
                         strokes.forEach(stroke=>
                         {
                             if(stroke.points[0][1]>=y_on_canvas)
                                 operation_details.strokes_below.push(stroke);
                         });
+                        refresh_canvas();
                         break;
                 }
                 
@@ -623,11 +675,14 @@
             }
         }
 
-        function drag(e) {
+        function move(e) {
             const x = e.clientX*window.devicePixelRatio;
             const y = e.clientY*window.devicePixelRatio;
             const x_on_canvas = x-canvas_offset[0];
             const y_on_canvas = y-canvas_offset[1];
+
+            mouse_x = x;
+            mouse_y = y;
 
             // e.stopPropagation();
             // e.preventDefault();
@@ -648,7 +703,7 @@
                             refresh_canvas();
                         break;
 
-                    case "insert horizontal space":
+                    case "split vertically":
                         operation_details.strokes_below.forEach(stroke=>
                         {
                             stroke.points.forEach(point=>
@@ -692,8 +747,9 @@
                     case "eraser":
                         break;
 
-                    case "insert horizontal space":
+                    case "split vertically":
                         document_edit_contents(operation_details.strokes_below, "stroke");
+                        refresh_canvas();
                         break;
                 }
             }
@@ -714,11 +770,12 @@
             element_to_put.style.left = bounding.left+offset[0]+"px";
             element_to_put.style.top = bounding.bottom+offset[1]+"px";
         }
-
+        
+        const state_bar = document.getElementById('state');
         const file_menu = document.getElementById('fileMenu');
         const pen_button = document.getElementById('penButton');
         const eraser_button = document.getElementById('eraserButton');
-        const insert_horizontal_space_button = document.getElementById('insertHorizontalSpaceButton');
+        const split_vertically_button = document.getElementById('splitVerticallyButton');
         const color_buttons =
         [
             document.getElementById('blackButton'),
@@ -796,8 +853,9 @@
                 console.error('Clipboard API error:', error);
                 
                 state_bar.innerHTML = "Document save failed.";
-                state_bar.style.color = "red";
+                state_bar.style.color = bad_state_color;
                 show_state();
+                succeed_state_showed = false;
             });
         });
 
@@ -818,8 +876,9 @@
                         console.error('Clipboard API error:', error);
                         
                         state_bar.innerHTML = "Document save failed.";
-                        state_bar.style.color = "red";
+                        state_bar.style.color = bad_state_color;
                         show_state();
+                        succeed_state_showed = false;
                     });
                 }, 10);
             }
@@ -834,7 +893,7 @@
             tool = "pen";
             pen_button.style.border = "3px solid white";
             eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
-            insert_horizontal_space_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+            split_vertically_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
         
         eraser_button.addEventListener('click', ()=>
@@ -843,16 +902,16 @@
             tool = "eraser";
             pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
             eraser_button.style.border = "3px solid white";
-            insert_horizontal_space_button.style.border = "3px solid rgba(0, 0, 0, 0)";
+            split_vertically_button.style.border = "3px solid rgba(0, 0, 0, 0)";
         });
         
-        insert_horizontal_space_button.addEventListener('click', ()=>
+        split_vertically_button.addEventListener('click', ()=>
         {
             hide_menus();
-            tool = "insert horizontal space";
+            tool = "split vertically";
             pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
             eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
-            insert_horizontal_space_button.style.border = "3px solid white";
+            split_vertically_button.style.border = "3px solid white";
         });
 
         for(var i=0; i<color_buttons.length; i++)
@@ -873,7 +932,7 @@
         }
 
         $('#drawingCanvas').on('pointerdown', startDrawing);
-        $('#drawingCanvas').on('pointermove', drag);
+        $('#drawingCanvas').on('pointermove', move);
         $('#drawingCanvas').on('pointerup', stop_drawing);
         $('#drawingCanvas').on('pointercancel', stop_drawing);
         $('#drawingCanvas').on('click touchend', (e)=>
@@ -906,15 +965,19 @@
             }
 
         }
+        
+        var good_state_color = "rgb(82, 153, 85)";
+        var bad_state_color = "red";
+
+        var succeed_state_showed = false;
 
         function show_state()
         {
-            const state = document.getElementById('state');
-            state.style.opacity = 1;
+            state_bar.style.opacity = 1;
             if(!state_fading_out)
             {
                 state_fading_out = true;
-                fade_out(document.getElementById('state'), 2000, 0.3, ()=>{
+                fade_out(state_bar, 1000, 0.3, ()=>{
                     state_fading_out = false;
                 });
             }
