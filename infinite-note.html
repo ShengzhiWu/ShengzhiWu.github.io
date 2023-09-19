@@ -122,6 +122,8 @@
             console.log(document_name);
 
             open_document(document_name);
+
+            refresh_canvas();
         };
 
         function do_something_with_updating_version_of_database(f)
@@ -476,7 +478,7 @@
             clear_canvas();
 
             // Reference lines
-            ctx.strokeStyle = "#999999";
+            ctx.strokeStyle = "#333333";
             ctx.lineWidth = 1;
             ctx.setLineDash([4*window.devicePixelRatio, 10*window.devicePixelRatio]);
             ctx.beginPath();
