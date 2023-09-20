@@ -8,7 +8,9 @@
     <link rel="shortcut icon" href="assets/icons/infinite-note.png">
     <link rel="apple-touch-icon" href="assets/icons/infinite-note.png">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script> <!-- For avoiding delay of pen interaction introduced by browser -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script> <!-- For generating PDF file -->
 </head>
 <body>
     <style>
@@ -76,8 +78,10 @@
     <ul class="submenu" id="fileMenu">
         <li id="deleteDocument">Delete document</li>
         <li id="renameDocument">Rename document</li>
-        <li id="fromJSON">From JSON</li>
-        <li id="toJSON">To JSON</li>
+        <li id="shareJSON">Share JSON</li>
+        <li id="sharePDF">Share PDF</li>
+        <li id="fromJSON">Reconstruct with JSON from clipboard</li>
+        <li id="toJSON">Convert to JSON to clipboard</li>
     </ul>
 
     <button id="penButton" style="position: absolute; width: 3em; height: 3em; left: 15em; top: 1em; padding: 0; color: white; background-color: black; border: 3px solid white;">
@@ -155,6 +159,44 @@
             };
         }
 
+        function get_stroke_boundary(stroke)
+        {
+            var x_min = Infinity;
+            var y_min = Infinity;
+            var x_max = -Infinity;
+            var y_max = -Infinity;
+
+            stroke.points.forEach(point=>
+            {
+                x_min = Math.min(x_min, point[0]);
+                y_min = Math.min(y_min, point[1]);
+                x_max = Math.max(x_max, point[0]);
+                y_max = Math.max(y_max, point[1]);
+            });
+
+            return [[x_min, y_min], [x_max, y_max]];
+        }
+
+        function get_document_boundary()
+        {
+            var x_min = Infinity;
+            var y_min = Infinity;
+            var x_max = -Infinity;
+            var y_max = -Infinity;
+
+            strokes.forEach(stroke=>
+            {
+                const stroke_boundary = get_stroke_boundary(stroke);
+
+                x_min = Math.min(x_min, stroke_boundary[0][0]);
+                y_min = Math.min(y_min, stroke_boundary[0][1]);
+                x_max = Math.max(x_max, stroke_boundary[1][0]);
+                y_max = Math.max(y_max, stroke_boundary[1][1]);
+            });
+
+            return [[x_min, y_min], [x_max, y_max]];
+        }
+
         function generate_json()
         {
             return JSON.stringify(
@@ -162,6 +204,43 @@
                 "time": new Date().getTime(),
                 "strokes": strokes
             });
+        }
+
+        function generate_pdf()
+        {
+            const document_boundary = get_document_boundary();
+            // console.log(document_boundary);
+            const offset_x = -document_boundary[0][0]+output_padding;
+            const offset_y = -document_boundary[0][1]+output_padding;
+            const document_width = document_boundary[1][0]-document_boundary[0][0];
+            const document_height = document_boundary[1][1]-document_boundary[0][1];
+
+            const doc = new jsPDF(
+                {
+                    unit: "pt",
+                    format:
+                    [
+                        document_width+output_padding*2,
+                        document_height+output_padding*2
+                    ],
+                    orientation: document_width<=document_height?"portrait":"landscape"
+                }
+            );
+
+            doc.setLineWidth(stroke_thickness);
+            // doc.setLineMiterLimit(stroke_miter_limit);  // This is not supported by jsPDF 1.5.3.
+            strokes.forEach(stroke=>
+            {
+                doc.setDrawColor(stroke.color?stroke.color:"black");
+                const steps = [];
+                for(var i=1; i<stroke.points.length; i++)
+                    steps.push(vector_subtract(stroke.points[i], stroke.points[i-1]));
+                doc.lines(steps, stroke.points[0][0]+offset_x, stroke.points[0][1]+offset_y, [1, 1], "S");
+            });
+
+            // doc.save("a4.pdf");
+
+            return doc.output("blob");
         }
 
         function document_exists_localStorage(name)
@@ -461,14 +540,14 @@
 
         canvas.width = window.innerWidth*window.devicePixelRatio;
         canvas.height = window.innerHeight*window.devicePixelRatio;
-        // canvas.style.width = window.innerWidth+"px";
-        // canvas.style.height = window.innerHeight+"px";
 
-        ctx.lineWidth = 3;  // Strikes thickness
-        // ctx.lineCap = 'round';
-        ctx.strokeStyle = 'black';
-
+        //Display parameters
+        var stroke_thickness = 3;
+        var stroke_miter_limit = 2;
         var canvas_offset = [Math.round(canvas.width*0.1)+0.5, 0.5];
+
+        //Output parameters
+        var output_padding = 20*window.devicePixelRatio;  // Used for sharing document as PDF file etc..
 
         // var stroke_count = 0;
         var strokes = [];
@@ -478,7 +557,7 @@
             clear_canvas();
 
             // Reference lines
-            ctx.strokeStyle = "#333333";
+            ctx.strokeStyle = "#222222";
             ctx.lineWidth = 1;
             ctx.setLineDash([4*window.devicePixelRatio, 10*window.devicePixelRatio]);
             ctx.beginPath();
@@ -506,8 +585,8 @@
 
             // Strokes
             ctx.setLineDash([]);
-            ctx.lineWidth = 3;
-            ctx.miterLimit = 2;
+            ctx.lineWidth = stroke_thickness;
+            ctx.miterLimit = stroke_miter_limit;
             strokes.forEach(stroke=>
             {
                 // console.log(stroke["color"]?stroke["color"]:"black")
@@ -847,6 +926,53 @@
             }
             
             hide_menus();
+        });
+
+        document.getElementById('shareJSON').addEventListener('click', ()=>
+        {
+            hide_menus();
+            if (navigator.share)
+            {
+                const blob = new Blob([generate_json()], { type: 'text/plain' });
+                try {
+                    navigator.share({
+                        title: document_name,
+                        text: 'Shared with Infinite Note',
+                        files: [new File([blob], document_name+'.json')],
+                    });
+                } catch (error) {
+                    console.error('Error sharing:', error);
+                    state_bar.innerHTML = "Share failed.";
+                    state_bar.style.color = bad_state_color;
+                    show_state_bar();
+                }
+            } else {
+                alert('Your browser does not support the Web Share API.');
+            }
+        });
+
+        document.getElementById('sharePDF').addEventListener('click', ()=>
+        {
+            hide_menus();
+            
+            if (navigator.share)
+            {
+                const blob = generate_pdf();
+                try {
+                    navigator.share({
+                        title: document_name,
+                        text: 'Shared with Infinite Note',
+                        files: [new File([blob], document_name+'.pdf')],
+                    });
+                } catch (error) {
+                    console.error('Error sharing:', error);
+                    state_bar.innerHTML = "Share failed.";
+                    state_bar.style.color = bad_state_color;
+                    show_state_bar();
+                }
+            } else {
+                alert('Your browser does not support the Web Share API.');
+            }
         });
 
         document.getElementById('toJSON').addEventListener('click', ()=>
