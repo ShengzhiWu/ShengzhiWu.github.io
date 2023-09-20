@@ -37,7 +37,7 @@
         button {
             margin-top: 10px;
             border-radius:1.5em;
-            box-shadow:0.1em 0.3em 1.5em 0.0em #000000bd;
+            box-shadow:0.1em 0.3em 1.5em 0.0em #00000094;
             z-index: 2;
         }
 
@@ -94,12 +94,19 @@
         <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
     </button>
 
-    <button id="blackButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: black; border: 3px solid white;"></button>
-    <button id="redButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(255, 0, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
-    <button id="yellowButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(255, 230, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
-    <button id="greenButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(53, 226, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
-    <button id="blueButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(0, 119, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
-    <button id="purpleButton" style="position: absolute; width: 3em; height: 3em; top: 1em; background-color: rgb(162, 0, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="blackButton" style="position: absolute; background-color: black; border: 3px solid white;"></button>
+    <button id="redButton" style="position: absolute; background-color: red; border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="yellowButton" style="position: absolute; background-color: rgb(255, 230, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="greenButton" style="position: absolute; background-color: rgb(53, 226, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="blueButton" style="position: absolute; background-color: rgb(0, 119, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="purpleButton" style="position: absolute; background-color: rgb(162, 0, 255); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    
+    <button id="grayButton" style="position: absolute; background-color: rgb(150, 150, 150); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="orangeButton" style="position: absolute; background-color: rgb(255, 123, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="yellowGreenButton" style="position: absolute; background-color: rgb(166, 255, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="greenBlueButton" style="position: absolute; background-color: rgb(0, 202, 185); border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="pureBlueButton" style="position: absolute; background-color: blue; border: 3px solid rgba(0, 0, 0, 0);"></button>
+    <button id="roseButton" style="position: absolute; background-color: rgb(255, 0, 140); border: 3px solid rgba(0, 0, 0, 0);"></button>
     
     <!-- <p id="console1" style="position: absolute;"></p> -->
     <!-- <p id="console2"></p> -->
@@ -547,7 +554,7 @@
         var canvas_offset = [Math.round(canvas.width*0.1)+0.5, 0.5];
 
         //Output parameters
-        var output_padding = 20*window.devicePixelRatio;  // Used for sharing document as PDF file etc..
+        var output_padding = 40*window.devicePixelRatio;  // Used for sharing document as PDF file etc..
 
         // var stroke_count = 0;
         var strokes = [];
@@ -865,19 +872,31 @@
         const color_buttons =
         [
             document.getElementById('blackButton'),
+            document.getElementById('grayButton'),
             document.getElementById('redButton'),
+            document.getElementById('orangeButton'),
             document.getElementById('yellowButton'),
+            document.getElementById('yellowGreenButton'),
             document.getElementById('greenButton'),
+            document.getElementById('greenBlueButton'),
             document.getElementById('blueButton'),
-            document.getElementById('purpleButton')
+            document.getElementById('pureBlueButton'),
+            document.getElementById('purpleButton'),
+            document.getElementById('roseButton')
         ];
         const colors = [
             "black",
-            "rgb(255, 0, 0)",
+            "rgb(150, 150, 150)",
+            "red",
+            "rgb(255, 123, 0)",
             "rgb(255, 230, 0)",
+            "rgb(166, 255, 0)",
             "rgb(53, 226, 0)",
+            "rgb(0, 202, 185)",
             "rgb(0, 119, 255)",
-            "rgb(162, 0, 255)"
+            "blue",
+            "rgb(162, 0, 255)",
+            "rgb(255, 0, 140)"
         ];
         const file_button = document.getElementById('fileButton');
 
@@ -1049,7 +1068,10 @@
 
         for(var i=0; i<color_buttons.length; i++)
         {
-            color_buttons[i].style.left = 35+4*i+"em";
+            color_buttons[i].style.left = 39+2*i-(i%2==0?1.5:0.75)+"em";
+            color_buttons[i].style.top = (i%2==0?1:3.5)+"em";
+            color_buttons[i].style.width = (i%2==0?3:1.5)+"em";
+            color_buttons[i].style.height = (i%2==0?3:1.5)+"em";
 
             const i_const = i;
             color_buttons[i].addEventListener('click', ()=>
