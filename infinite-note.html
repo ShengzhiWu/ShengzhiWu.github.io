@@ -36,8 +36,8 @@
 
         button {
             margin-top: 10px;
-            border-radius:1.5em;
-            box-shadow:0.1em 0.3em 1.5em 0.0em #00000094;
+            border-radius: 1.5em;
+            box-shadow: 0.1em 0.3em 1.5em 0.0em #00000094;
             z-index: 2;
         }
 
@@ -699,7 +699,7 @@
             return need_refresh;
         }
 
-        function startDrawing(e) {
+        function start_drawing(e) {
             // console.log(e);
             // ctx.lineWidth = 6*e.pressure;
             
@@ -1087,7 +1087,7 @@
             });
         }
 
-        $('#drawingCanvas').on('pointerdown', startDrawing);
+        $('#drawingCanvas').on('pointerdown', start_drawing);
         $('#drawingCanvas').on('pointermove', pointer_move);
         $('#drawingCanvas').on('pointerup', stop_drawing);
         $('#drawingCanvas').on('pointercancel', stop_drawing);
