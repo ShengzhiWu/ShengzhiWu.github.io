@@ -94,6 +94,13 @@
         <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
     </button>
 
+    <button id="undoButton" style="position: absolute; width: 3em; height: 3em; left: 1em; bottom: 18em; padding: 0; color: white; background-color: rgba(0, 0, 0, 0); border: 3px solid white;">
+        <img src="assets\infinite-note\undo.svg" alt="Pen" style="height: 1.7em;"></svg>
+    </button>
+    <button id="redoButton" style="position: absolute; width: 3em; height: 3em; left: 1em; bottom: 13em; padding: 0; color: white; background-color: rgba(0, 0, 0, 0); border: 3px solid white;">
+        <img src="assets\infinite-note\redo.svg" alt="Pen" style="height: 1.7em;"></svg>
+    </button>
+
     <button id="blackButton" style="position: absolute; background-color: black; border: 3px solid white;"></button>
     <button id="redButton" style="position: absolute; background-color: red; border: 3px solid rgba(0, 0, 0, 0);"></button>
     <button id="yellowButton" style="position: absolute; background-color: rgb(255, 230, 0); border: 3px solid rgba(0, 0, 0, 0);"></button>
@@ -215,6 +222,8 @@
 
         function generate_pdf()
         {
+            const output_resize = 1.0;
+
             const document_boundary = get_document_boundary();
             // console.log(document_boundary);
             const offset_x = -document_boundary[0][0]+output_padding;
@@ -242,7 +251,7 @@
                 const steps = [];
                 for(var i=1; i<stroke.points.length; i++)
                     steps.push(vector_subtract(stroke.points[i], stroke.points[i-1]));
-                doc.lines(steps, (stroke.points[0][0]+offset_x)*0.8, (stroke.points[0][1]+offset_y)*0.8, [0.8, 0.8], "S");
+                doc.lines(steps, (stroke.points[0][0]+offset_x)*output_resize, (stroke.points[0][1]+offset_y)*output_resize, [output_resize, output_resize], "S");
             });
 
             // doc.save("a4.pdf");
@@ -683,6 +692,8 @@
             return false;
         }
 
+        var erased_strokes;
+
         function erase(x, y)
         {
             var need_refresh = false;
@@ -691,6 +702,7 @@
                 if(near_polyline(x, y, strokes[i]["points"], eraser_radius))
                 {
                     document_delete_stroke(strokes[i]);
+                    erased_strokes.push(strokes[i]);
                     strokes.splice(i, 1);
                     i --;
                     need_refresh = true;
@@ -734,6 +746,7 @@
                         break;
 
                     case "eraser":
+                        erased_strokes = [];
                         is_drawing = true;
                         const need_refresh = erase(x_on_canvas, y_on_canvas);
                         if(need_refresh)
@@ -835,14 +848,28 @@
                     case "pen":
                         ctx.closePath();
                         document_add_content(strokes[strokes.length-1], "stroke");
+                        record({
+                            type: "add stroke",
+                            stroke: strokes[strokes.length-1]
+                        });
                         break;
 
                     case "eraser":
+                        if(erased_strokes.length>0)
+                            record({
+                                type: "delete strokes",
+                                strokes: [... erased_strokes]
+                            });
                         break;
 
                     case "split vertically":
                         document_edit_contents(operation_details.strokes_below, "stroke");
                         refresh_canvas();
+                        record({
+                            type: "move strokes",
+                            strokes: [... operation_details.strokes_below],
+                            movement: [0, mouse_y-operation_details.start_y]
+                        });
                         break;
                 }
             }
@@ -1064,6 +1091,102 @@
             pen_button.style.border = "3px solid rgba(0, 0, 0, 0)";
             eraser_button.style.border = "3px solid rgba(0, 0, 0, 0)";
             split_vertically_button.style.border = "3px solid white";
+        });
+
+        var action_history = [];
+        var time_step = -1;
+
+        function record(action)
+        {
+            action_history = action_history.slice(0, time_step+1);
+            action_history.push(action);
+            time_step ++;
+        }
+
+        document.getElementById('undoButton').addEventListener('click', ()=>
+        {
+            if(time_step>=0)
+            {
+                const action = action_history[time_step];
+                switch(action.type)
+                {
+                    case "add stroke":
+                        var i;
+                        for(i=0; i<strokes.length; i++)
+                            if(strokes[i].id==action.stroke.id)
+                                break;
+                        document_delete_stroke(strokes[i]);
+                        strokes.splice(i, 1);
+                        break;
+                        
+                    case "delete strokes":
+                        strokes = strokes.concat(action.strokes);
+                        action.strokes.forEach(stroke=>
+                        {
+                            document_add_content(stroke, "stroke");
+                        });
+                        break;
+                        
+                    case "move strokes":
+                        action.strokes.forEach(stroke=>
+                        {
+                            stroke.points.forEach(point=>
+                            {
+                                point[0] -= action.movement[0];
+                                point[1] -= action.movement[1];
+                            });
+                        });
+                        document_edit_contents(action.strokes, "stroke");
+                        break;
+                }
+
+                time_step --;
+
+                refresh_canvas();
+            }
+        });
+
+        document.getElementById('redoButton').addEventListener('click', ()=>
+        {
+            if(time_step+1<action_history.length)
+            {
+                time_step ++;
+                const action = action_history[time_step];
+
+                switch(action.type)
+                {
+                    case "add stroke":
+                        strokes.push(action.stroke);
+                        document_add_content(action.stroke, "stroke");
+                        break;
+                        
+                    case "delete strokes":
+                        action.strokes.forEach(stroke=>
+                        {
+                            var i;
+                            for(i=0; i<strokes.length; i++)
+                                if(strokes[i].id==stroke.id)
+                                    break;
+                            document_delete_stroke(strokes[i]);
+                            strokes.splice(i, 1);
+                        });
+                        break;
+                        
+                    case "move strokes":
+                        action.strokes.forEach(stroke=>
+                        {
+                            stroke.points.forEach(point=>
+                            {
+                                point[0] += action.movement[0];
+                                point[1] += action.movement[1];
+                            });
+                        });
+                        document_edit_contents(action.strokes, "stroke");
+                        break;
+                }
+
+                refresh_canvas();
+            }
         });
 
         for(var i=0; i<color_buttons.length; i++)
