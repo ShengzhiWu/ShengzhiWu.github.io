@@ -84,21 +84,24 @@
         <li id="toJSON">Convert to JSON to clipboard</li>
     </ul>
 
-    <button id="penButton" style="position: absolute; width: 3em; height: 3em; left: 15em; top: 1em; padding: 0; color: white; background-color: black; border: 3px solid white;">
+    <button id="penButton" style="position: absolute; width: 3em; height: 3em; left: 15em; top: 1em; padding: 0; background-color: black; border: 3px solid white;">
         <img src="assets\infinite-note\pen.svg" alt="Pen" style="height: 2.5em;"></svg>
     </button>
-    <button id="eraserButton" style="position: absolute; width: 3em; height: 3em; left: 20em; top: 1em; padding: 0; color: black; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="eraserButton" style="position: absolute; width: 3em; height: 3em; left: 20em; top: 1em; padding: 0; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\eraser.svg" alt="Eraser" style="height: 2.5em;"></svg>
     </button>
-    <button id="splitVerticallyButton" style="position: absolute; width: 3em; height: 3em; left: 25em; top: 1em; padding: 0; color: black; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="splitVerticallyButton" style="position: absolute; width: 3em; height: 3em; left: 25em; top: 1em; padding: 0; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
     </button>
 
-    <button id="undoButton" style="position: absolute; width: 3em; height: 3em; left: 1em; bottom: 18em; padding: 0; color: white; background-color: rgba(0, 0, 0, 0); border: 3px solid white;">
-        <img src="assets\infinite-note\undo.svg" alt="Pen" style="height: 1.7em;"></svg>
+    <button id="undoButton" style="position: absolute; width: 3.5em; height: 3.5em; left: 1em; bottom: 19.5em; padding: 0; background-color: rgba(0, 0, 0, 0); border: 3px solid white; border-radius: 1.75em;">
+        <img src="assets\infinite-note\undo.svg" alt="Undo" style="height: 1.7em;"></svg>
     </button>
-    <button id="redoButton" style="position: absolute; width: 3em; height: 3em; left: 1em; bottom: 13em; padding: 0; color: white; background-color: rgba(0, 0, 0, 0); border: 3px solid white;">
-        <img src="assets\infinite-note\redo.svg" alt="Pen" style="height: 1.7em;"></svg>
+    <button id="redoButton" style="position: absolute; width: 3.5em; height: 3.5em; left: 1em; bottom: 14em; padding: 0; background-color: rgba(0, 0, 0, 0); border: 3px solid white; border-radius: 1.75em;">
+        <img src="assets\infinite-note\redo.svg" alt="Redo" style="height: 1.7em;"></svg>
+    </button>
+    <button id="100%Button" style="position: absolute; width: 4em; height: 3.5em; left: 1em; bottom: 6em; padding: 0; background-color: rgba(0, 0, 0, 0); border: 3px solid white; border-radius: 0.7em; opacity: 0;">
+        100%
     </button>
 
     <button id="blackButton" style="position: absolute; background-color: black; border: 3px solid white;"></button>
@@ -552,7 +555,7 @@
         var is_moving_canvas = false;
         var tool = "pen";
         var pen_color = "black";
-        var operation_details;
+        var operation_details_list = [];  // 每个触控点产生此数组中的一项
 
         canvas.width = window.innerWidth*window.devicePixelRatio;
         canvas.height = window.innerHeight*window.devicePixelRatio;
@@ -561,6 +564,7 @@
         var stroke_thickness = 3;
         var stroke_miter_limit = 2;
         var canvas_offset = [Math.round(canvas.width*0.1)+0.5, 0.5];
+        var canvas_scale = 1;
 
         //Output parameters
         var output_padding = 40*window.devicePixelRatio;  // Used for sharing document as PDF file etc..
@@ -574,11 +578,11 @@
 
             // Reference lines
             ctx.strokeStyle = "#222222";
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4*window.devicePixelRatio, 10*window.devicePixelRatio]);
+            ctx.lineWidth = 1*canvas_scale;
+            ctx.setLineDash([4*window.devicePixelRatio*canvas_scale, 10*window.devicePixelRatio*canvas_scale]);
             ctx.beginPath();
-            ctx.moveTo(Math.round(canvas_offset[0])+0.5, canvas_offset[1]%(14*window.devicePixelRatio)/*period of dashed line*/-14*window.devicePixelRatio);
-            ctx.lineTo(Math.round(canvas_offset[0])+0.5, canvas.height);
+            ctx.moveTo(Math.round(canvas_offset[0]*canvas_scale)+0.5, (canvas_offset[1]*canvas_scale)%(14*window.devicePixelRatio*canvas_scale)/*period of dashed line*/-14*window.devicePixelRatio*canvas_scale);
+            ctx.lineTo(Math.round(canvas_offset[0]*canvas_scale)+0.5, canvas.height);
             ctx.stroke();
             ctx.closePath();
             if(is_drawing)
@@ -586,8 +590,8 @@
                 {
                     case "split vertically":
                         ctx.beginPath();
-                        ctx.moveTo(0, operation_details.start_y+0.5);
-                        ctx.lineTo(canvas.width, operation_details.start_y+0.5);
+                        ctx.moveTo(0, operation_details_list[0].start_y+0.5);
+                        ctx.lineTo(canvas.width, operation_details_list[0].start_y+0.5);
                         ctx.stroke();
                         ctx.closePath();
 
@@ -601,8 +605,8 @@
 
             // Strokes
             ctx.setLineDash([]);
-            ctx.lineWidth = stroke_thickness;
-            ctx.miterLimit = stroke_miter_limit;
+            ctx.lineWidth = stroke_thickness*canvas_scale;
+            ctx.miterLimit = stroke_miter_limit*canvas_scale;
             strokes.forEach(stroke=>
             {
                 // console.log(stroke["color"]?stroke["color"]:"black")
@@ -610,10 +614,10 @@
                 const points = stroke["points"];
                 // console.log(points);
                 ctx.beginPath();
-                ctx.moveTo(points[0][0]+canvas_offset[0], points[0][1]+canvas_offset[1]);
+                ctx.moveTo((points[0][0]+canvas_offset[0])*canvas_scale, (points[0][1]+canvas_offset[1])*canvas_scale);
                 for(var i=1;i<points.length;i++)
                 {
-                    ctx.lineTo(points[i][0]+canvas_offset[0], points[i][1]+canvas_offset[1]);
+                    ctx.lineTo((points[i][0]+canvas_offset[0])*canvas_scale, (points[i][1]+canvas_offset[1])*canvas_scale);
                 }
                 ctx.stroke();
                 ctx.closePath();
@@ -633,8 +637,6 @@
         {
             initialize_document(JSON.parse(data));
         }
-
-        var last_x, last_y;
 
         function vector_subtract(u, v)
         {
@@ -719,8 +721,8 @@
 
             const x = e.clientX*window.devicePixelRatio;
             const y = e.clientY*window.devicePixelRatio;
-            const x_on_canvas = x-canvas_offset[0];
-            const y_on_canvas = y-canvas_offset[1];
+            const x_on_canvas = x/canvas_scale-canvas_offset[0];
+            const y_on_canvas = y/canvas_scale-canvas_offset[1];
 
             mouse_x = x;
             mouse_y = y;
@@ -730,60 +732,87 @@
             // my_console1.innerHTML = "startDrawing";
             // my_console2.innerHTML = tap_count++;
             // my_console1.innerHTML = e.pointerType;
+            const operation_details = {
+                pointer_id: e.pointerId
+            };
             if(e.pointerType=='pen'||(e.pointerType=='mouse'&&e.button==0))
             {
-                switch(tool)
+                if(operation_details_list.length==0)  // This is the first pointer (always be true except on multi-touch devices)
                 {
-                    case "pen":
-                        strokes.push(
-                        {
-                            "points": [[x_on_canvas, y_on_canvas]],
-                            "color": pen_color
-                        });
-                        is_drawing = true;
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                        break;
+                    operation_details_list.push(operation_details);
+                    switch(tool)
+                    {
+                        case "pen":
+                            strokes.push(
+                            {
+                                "points": [[x_on_canvas, y_on_canvas]],
+                                "color": pen_color
+                            });
+                            is_drawing = true;
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            break;
 
-                    case "eraser":
-                        erased_strokes = [];
-                        is_drawing = true;
-                        const need_refresh = erase(x_on_canvas, y_on_canvas);
-                        if(need_refresh)
+                        case "eraser":
+                            erased_strokes = [];
+                            is_drawing = true;
+                            const need_refresh = erase(x_on_canvas, y_on_canvas);
+                            if(need_refresh)
+                                refresh_canvas();
+                            break;
+
+                        case "split vertically":
+                            is_drawing = true;
+                            operation_details.strokes_below = [];
+                            operation_details.start_y = y;
+                            strokes.forEach(stroke=>
+                            {
+                                if(stroke.points[0][1]>=y_on_canvas)
+                                    operation_details.strokes_below.push(stroke);
+                            });
                             refresh_canvas();
-                        break;
-
-                    case "split vertically":
-                        is_drawing = true;
-                        operation_details =
-                        {
-                            strokes_below: [],
-                            start_y: y
-                        };
-                        strokes.forEach(stroke=>
-                        {
-                            if(stroke.points[0][1]>=y_on_canvas)
-                                operation_details.strokes_below.push(stroke);
-                        });
-                        refresh_canvas();
-                        break;
+                            break;
+                    }
                 }
-                
             }
             else  // Drag canvas
             {
-                last_x = x;
-                last_y = y;
+                operation_details_list.push(operation_details);
+                // operation_details.start_x = x;
+                // operation_details.start_y = y;
+                operation_details.last_x = x;
+                operation_details.last_y = y;
                 is_moving_canvas = true;
             }
         }
 
+        function square(x)
+        {
+            return x*x;
+        }
+
+        function scale_canvas_with_a_point_on_screen_fixed(factor, fixed_point)
+        {
+            const x_on_canvas = fixed_point[0]/canvas_scale-canvas_offset[0];
+            const y_on_canvas = fixed_point[1]/canvas_scale-canvas_offset[1];
+
+            canvas_offset[0] -= (x_on_canvas+canvas_offset[0])*(1-1/factor);
+            canvas_offset[1] -= (y_on_canvas+canvas_offset[1])*(1-1/factor);
+            canvas_scale *= factor;
+            refresh_canvas();
+            document.getElementById('100%Button').style.opacity = canvas_scale==1?0:1;
+        }
+
         function pointer_move(e) {
+            // state_bar.innerHTML = "id = "+e.pointerId;
+            // state_bar.style.color = "black";
+            // show_state_bar();
+            // console.log(e);
             const x = e.clientX*window.devicePixelRatio;
             const y = e.clientY*window.devicePixelRatio;
-            const x_on_canvas = x-canvas_offset[0];
-            const y_on_canvas = y-canvas_offset[1];
-            const movement_y = y-mouse_y;
+            const x_on_canvas = x/canvas_scale-canvas_offset[0];
+            const y_on_canvas = y/canvas_scale-canvas_offset[1];
+            const movement_y_on_canvas = (y-mouse_y)/canvas_scale;
 
             mouse_x = x;
             mouse_y = y;
@@ -793,44 +822,87 @@
             if (is_drawing)
             {
                 // my_console1.innerHTML = "drawing";
-                switch(tool)
+                var i;
+                for(i=0; i<operation_details_list.length; i++)
+                    if(operation_details_list[i].pointer_id==e.pointerId)
+                        break;
+                if(i<operation_details_list.length)
                 {
-                    case "pen":
-                        strokes[strokes.length-1]["points"].push([x_on_canvas, y_on_canvas]);
-                        ctx.lineTo(x, y);
-                        ctx.stroke();
-                        break;
+                    const operation_details = operation_details_list[i];
+                    switch(tool)
+                    {
+                        case "pen":
+                            strokes[strokes.length-1]["points"].push([x_on_canvas, y_on_canvas]);
+                            ctx.lineTo(x, y);
+                            ctx.stroke();
+                            break;
 
-                    case "eraser":
-                        const need_refresh = erase(x_on_canvas, y_on_canvas);
-                        if(need_refresh)
-                            refresh_canvas();
-                        break;
+                        case "eraser":
+                            const need_refresh = erase(x_on_canvas, y_on_canvas);
+                            if(need_refresh)
+                                refresh_canvas();
+                            break;
 
-                    case "split vertically":
-                        // state_bar.innerHTML = e.movementY;
-                        // show_state_bar();
-                        operation_details.strokes_below.forEach(stroke=>
-                        {
-                            stroke.points.forEach(point=>
+                        case "split vertically":
+                            // state_bar.innerHTML = e.movementY;
+                            // show_state_bar();
+                            operation_details.strokes_below.forEach(stroke=>
                             {
-                                point[1] += movement_y;
+                                stroke.points.forEach(point=>
+                                {
+                                    point[1] += movement_y_on_canvas;
+                                });
                             });
-                        });
-                        if(movement_y!=0)
-                            refresh_canvas();
-                        break;
+                            if(movement_y_on_canvas!=0)
+                                refresh_canvas();
+                            break;
+                    }
                 }
             }
             else if(is_moving_canvas)
             {
-                canvas_offset[0] += x-last_x;
-                canvas_offset[1] += y-last_y;
-                refresh_canvas();
-            }
+                var i;
+                for(i=0; i<operation_details_list.length; i++)
+                    if(operation_details_list[i].pointer_id==e.pointerId)
+                        break;
+                if(i<operation_details_list.length)
+                {
+                    const operation_details = operation_details_list[i];
+                    if(operation_details_list.length==1)  // Move
+                    {
+                        canvas_offset[0] += (x-operation_details.last_x)/canvas_scale;
+                        canvas_offset[1] += (y-operation_details.last_y)/canvas_scale;
+                        refresh_canvas();
+                    }
+                    else
+                    {
+                        if(i<2)  // Scale
+                        {
+                            const j = 1-i;
+                            const a = [x-operation_details_list[j].last_x, y-operation_details_list[j].last_y];
+                            const last_distance = Math.sqrt(
+                                square(operation_details.last_x-operation_details_list[j].last_x)+
+                                square(operation_details.last_y-operation_details_list[j].last_y));
+                            const distance = Math.sqrt(
+                                square(a[0])+
+                                square(a[1]));
 
-            last_x = x;
-            last_y = y;
+                            // 中心平移矫正
+                            const a_normalize = [a[0]/distance, a[1]/distance];
+                            const normal = [-a_normalize[1], a_normalize[0]];
+                            const center_move = [(x-operation_details.last_x)/(canvas_scale*2), (y-operation_details.last_y)/(canvas_scale*2)];
+                            const dot = normal[0]*center_move[0]+normal[1]*center_move[1];
+                            canvas_offset[0] += normal[0]*dot;
+                            canvas_offset[1] += normal[1]*dot;
+
+                            scale_canvas_with_a_point_on_screen_fixed(distance/last_distance,
+                                [operation_details_list[j].last_x, operation_details_list[j].last_y]);
+                        }
+                    }
+                    operation_details.last_x = x;
+                    operation_details.last_y = y;
+                }
+            }
         }
 
         function stop_drawing(e) {
@@ -843,36 +915,52 @@
             if(is_drawing)
             {
                 is_drawing = false;
-                switch(tool)
+
+                var i;
+                for(i=0; i<operation_details_list.length; i++)
+                    if(operation_details_list[i].pointer_id==e.pointerId)
+                        break;
+                if(i<operation_details_list.length)
                 {
-                    case "pen":
-                        ctx.closePath();
-                        document_add_content(strokes[strokes.length-1], "stroke");
-                        record({
-                            type: "add stroke",
-                            stroke: strokes[strokes.length-1]
-                        });
-                        break;
-
-                    case "eraser":
-                        if(erased_strokes.length>0)
+                    const operation_details = operation_details_list[i];
+                    switch(tool)
+                    {
+                        case "pen":
+                            ctx.closePath();
+                            document_add_content(strokes[strokes.length-1], "stroke");
                             record({
-                                type: "delete strokes",
-                                strokes: [... erased_strokes]
+                                type: "add stroke",
+                                stroke: strokes[strokes.length-1]
                             });
-                        break;
+                            break;
 
-                    case "split vertically":
-                        document_edit_contents(operation_details.strokes_below, "stroke");
-                        refresh_canvas();
-                        record({
-                            type: "move strokes",
-                            strokes: [... operation_details.strokes_below],
-                            movement: [0, mouse_y-operation_details.start_y]
-                        });
-                        break;
+                        case "eraser":
+                            if(erased_strokes.length>0)
+                                record({
+                                    type: "delete strokes",
+                                    strokes: [... erased_strokes]
+                                });
+                            break;
+
+                        case "split vertically":
+                            document_edit_contents(operation_details.strokes_below, "stroke");
+                            refresh_canvas();
+                            record({
+                                type: "move strokes",
+                                strokes: [... operation_details.strokes_below],
+                                movement: [0, mouse_y-operation_details.start_y]
+                            });
+                            break;
+                    }
                 }
             }
+
+            for(var i=0; i<operation_details_list.length; i++)
+                if(operation_details_list[i].pointer_id==e.pointerId)
+                {
+                    operation_details_list.splice(i, 1);
+                    i --;
+                }
         }
 
         function clear_canvas() {
@@ -1189,6 +1277,14 @@
             }
         });
 
+        document.getElementById('100%Button').addEventListener('click', ()=>
+        {
+            if(document.getElementById('100%Button').style.opacity==0)
+                return;
+
+            scale_canvas_with_a_point_on_screen_fixed(1/canvas_scale, [canvas.width/2, canvas.height/2]);
+        });
+
         for(var i=0; i<color_buttons.length; i++)
         {
             color_buttons[i].style.left = 39+2*i-(i%2==0?1.5:0.75)+"em";
@@ -1219,6 +1315,12 @@
             e.stopPropagation();
             e.preventDefault();
         });
+        canvas.addEventListener("wheel", (e)=>
+        {
+            const x = e.clientX*window.devicePixelRatio;
+            const y = e.clientY*window.devicePixelRatio;
+            scale_canvas_with_a_point_on_screen_fixed(Math.exp(e.wheelDelta*0.001), [x, y]);
+        });
 
         var state_fading_out = false;
 
@@ -1247,6 +1349,7 @@
         
         var good_state_color = "rgb(82, 153, 85)";
         var bad_state_color = "red";
+        var normal_state_color = "black";
 
         var succeed_state_showed = false;
 
