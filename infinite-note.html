@@ -50,8 +50,8 @@
             padding-top: 0;
             padding-bottom: 0;
             list-style-type: none;
-            background-color: white;
-            box-shadow:0.1em 0.3em 1.5em 0.0em #000000bd;
+            background-color: rgba(255, 255, 255, 0.596);
+            box-shadow:0.1em 0.3em 1.5em 0.0em #00000094;
             border-radius: 0.5em;
             border-top-left-radius: 0;
             z-index: 3;
@@ -84,13 +84,13 @@
         <li id="toJSON">Convert to JSON to clipboard</li>
     </ul>
 
-    <button id="penButton" style="position: absolute; width: 3em; height: 3em; left: 15em; top: 1em; padding: 0; background-color: black; border: 3px solid white;">
+    <button id="penButton" style="position: absolute; width: 3em; height: 3em; left: 18em; top: 1em; padding: 0; background-color: black; border: 3px solid white;">
         <img src="assets\infinite-note\pen.svg" alt="Pen" style="height: 2.5em;"></svg>
     </button>
-    <button id="eraserButton" style="position: absolute; width: 3em; height: 3em; left: 20em; top: 1em; padding: 0; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="eraserButton" style="position: absolute; width: 3em; height: 3em; left: 23em; top: 1em; padding: 0; background-color: rgb(255, 189, 189); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\eraser.svg" alt="Eraser" style="height: 2.5em;"></svg>
     </button>
-    <button id="splitVerticallyButton" style="position: absolute; width: 3em; height: 3em; left: 25em; top: 1em; padding: 0; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
+    <button id="splitVerticallyButton" style="position: absolute; width: 3em; height: 3em; left: 28em; top: 1em; padding: 0; background-color: rgb(228, 228, 228); border: 3px solid rgba(0, 0, 0, 0);">
         <img src="assets\infinite-note\split-vertically.svg" alt="Move ↕" style="height: 2.5em;"></svg>
     </button>
 
@@ -1287,7 +1287,7 @@
 
         for(var i=0; i<color_buttons.length; i++)
         {
-            color_buttons[i].style.left = 39+2*i-(i%2==0?1.5:0.75)+"em";
+            color_buttons[i].style.left = 45+2*i-(i%2==0?1.5:0.75)+"em";
             color_buttons[i].style.top = (i%2==0?1:3.5)+"em";
             color_buttons[i].style.width = (i%2==0?3:1.5)+"em";
             color_buttons[i].style.height = (i%2==0?3:1.5)+"em";
