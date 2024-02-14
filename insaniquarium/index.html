@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insaniquarium</title>
+    <style>
+        body, html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: black;
+    }
+
+    .container {
+        /* display: grid;
+        place-items: center; */
+        width: calc(min(100vw, 100vh * 4 / 3));
+        height: calc(min(100vw * 3 / 4, 100vh));
+    }
+    </style>
+</head>
+<body>
+    <div class="container" style="background: url(assets/aquarium1.jpg); background-size: 100%;">
+        <!-- <img src="assets/aquarium1.jpg" style="position: absolute; width: 100%; min-width: 0; min-height: 0; z-index: 1;"> -->
+
+        <canvas id="myCanvas" width="640" height="480" style="position: absolute; width: 100%; z-index: 2;"></canvas>
+
+        <!-- <div style="transform-origin: top left; transform: scale(calc(960px / 640px));">
+            <div style="
+            position: relative;
+                    width: 80px;
+                    height: 80px;
+                    left: 100px;
+                    top: 100px;
+                    overflow: hidden;
+            ">
+                <img
+                src="assets/smallswim.png" style="
+                    position: relative;
+                    width: 800px;
+                    height: 400px;
+                    top: -160px;
+                    z-index: 1;
+                ">
+            </div>
+        </div> -->
+        
+    </div>
+
+    <script>
+        const canvas = document.querySelector("#myCanvas");
+
+        if (canvas.getContext)
+        {
+            function drawImagePart(ctx, image, x, y, frameWidth, frameHeight, i, j)
+            {
+                ctx.drawImage(image, i * frameWidth, j * frameHeight, frameWidth, frameHeight, x, y, frameWidth, frameHeight);
+            }
+
+            const ctx = canvas.getContext("2d");
+            
+            const imageSmallSwim = new Image();
+            imageSmallSwim.src = 'assets/smallswim.png';
+            const imageSmallTurn = new Image();
+            imageSmallTurn.src = 'assets/smallturn.png';
+
+            // Define variables for animation
+            var totalFrames = 10; // Total number of frames
+            var currentFrame = 0; // Current frame index
+            
+            var frameRate = 10; // Frame rate (frames per second)
+
+            const objectList = [
+                {
+                    'name': 'guppy',
+                    'location': [320, 220],
+                    'current frame': 0,
+                    'stage': 1,
+                    'state': 'swim',
+                    'hungry': false,
+                    'direction': [2.5, 0],
+                    'want to turn': false
+                },
+                {
+                    'name': 'guppy',
+                    'location': [160, 130],
+                    'current frame': 3,
+                    'stage': 3,
+                    'state': 'swim',
+                    'hungry': false,
+                    'direction': [-2.5, 0],
+                    'want to turn': false
+                }
+            ];
+
+            // Function to update the animation frame
+            function updateFrame() {
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw the current frame
+                objectList.forEach(object => {
+                    switch(object['name'])
+                    {
+                        case 'guppy':
+                            switch(object['state'])
+                            {
+                                case 'swim':
+                                    object['location'][0] += object['direction'][0];
+                                    object['location'][1] += object['direction'][1];
+                                    if(object['current frame'] == 9 && (object['location'][0] < 100 && object['direction'][0]<0 || object['location'][0] > 540 && object['direction'][0]>0))
+                                    {
+                                        object['state'] = 'turn';
+                                        object['current frame'] = 0;
+                                    }
+                                    break;
+                                
+                                case 'turn':
+                                    if(object['current frame'] == 9)
+                                    {
+                                        object['state'] = 'swim';
+                                        object['current frame'] = 0;
+                                        object['direction'][0] *= -1;
+                                    }
+                                    break;
+                            }
+                            
+                            ctx.save();
+                            ctx.translate(...object['location']);
+                            ctx.scale(-Math.sign(object['direction'][0]), 1);
+                            drawImagePart(ctx, object['state']=='swim'?imageSmallSwim:imageSmallTurn, -40, -40, 80, 80, object['current frame'], object['stage']);
+                            ctx.restore();
+
+                            object['current frame'] = (object['current frame'] + 1) % 10;
+
+                            break;
+                    }
+                });
+            }
+
+            // Start the animation loop
+            setInterval(updateFrame, 1000 / frameRate);
+        }
+    </script>
+</body>
+</html>
