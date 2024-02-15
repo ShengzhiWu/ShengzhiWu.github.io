@@ -23,7 +23,7 @@
     </style>
 </head>
 <body>
-    <div class="container" style="background: url(assets/aquarium1.jpg); background-size: 100%;">
+    <div class="container" id="container" style="background: url(assets/aquarium1.jpg); background-size: 100%;">
         <!-- <img src="assets/aquarium1.jpg" style="position: absolute; width: 100%; min-width: 0; min-height: 0; z-index: 1;"> -->
 
         <canvas id="myCanvas" width="640" height="480" style="position: relative; width: 100%;"></canvas>
@@ -51,13 +51,26 @@
     </div>
 
     <script>
+        const container = document.querySelector("#container");
         const canvas = document.querySelector("#myCanvas");
 
         if (canvas.getContext)
         {
-            function drawImagePart(ctx, image, x, y, frameWidth, frameHeight, i, j)
+            function drawImagePart(ctx, image, x, y, frameWidth, frameHeight, i, j, opacity)
             {
+                ctx.globalAlpha = opacity;
                 ctx.drawImage(image, i * frameWidth, j * frameHeight, frameWidth, frameHeight, x, y, frameWidth, frameHeight);
+                ctx.globalAlpha = 1;
+            }
+
+            function drawObject(ctx, image, x, y, frameWidth, frameHeight, flip, i, j, opacity=1)
+            {
+                ctx.save();
+                ctx.translate(x, y);
+                if(flip)
+                    ctx.scale(-1, 1);
+                drawImagePart(ctx, image, -frameWidth/2, -frameHeight/2, frameWidth, frameHeight, i, j, opacity);
+                ctx.restore();
             }
 
             const ctx = canvas.getContext("2d");
@@ -66,83 +79,477 @@
             imageSmallSwim.src = 'assets/smallswim.png';
             const imageSmallTurn = new Image();
             imageSmallTurn.src = 'assets/smallturn.png';
+            const imageSmallEat = new Image();
+            imageSmallEat.src = 'assets/smalleat.png';
+            const imageFood = new Image();
+            imageFood.src = 'assets/food.png';
+            const imageMoney = new Image();
+            imageMoney.src = 'assets/money.png';
+            const imageStinky = new Image();
+            imageStinky.src = 'assets/stinky.png';
+            const imageNiko = new Image();
+            imageNiko.src = 'assets/niko.png';
 
             // Define variables for animation
             var totalFrames = 10; // Total number of frames
             var currentFrame = 0; // Current frame index
             
-            var frameRate = 10; // Frame rate (frames per second)
+            var frameRate = 20; // Frame rate (frames per second)
 
-            const objectList = [
+            const targetRadiusFreeX = 150;
+            const targetRadiusFreeY = 70;
+
+            const animals = [
                 {
-                    'name': 'guppy',
-                    'location': [320, 220],
+                    'name': 'niko',
+                    'location': [135, 290],
+                    'current frame': 1,
+                    'frame adding': true
+                },
+                {
+                    'name': 'stinky',  // 🐌
+                    'location': [236, 405],
                     'current frame': 0,
-                    'stage': 1,
-                    'state': 'swim',
-                    'hungry': false,
-                    'direction': [2.5, 0],
-                    'want to turn': false
+                    'state': 'move',
+                    'frame adding': true,
+                    'speed': [1.2, undefined]
                 },
                 {
                     'name': 'guppy',
-                    'location': [160, 130],
+                    'location': [Math.random()*540+50, Math.random()*350+50],
+                    'current frame': 0,
+                    'stage': 0,
+                    'state': 'swim',
+                    'hungry': Math.random()*5,
+                    'target': [undefined, undefined],
+                    'target radius x': targetRadiusFreeX,
+                    'target radius y': targetRadiusFreeY,
+                    'speed': [2, 0],
+                    'real speed': [0, 0],
+                    'acceleration': [0, 0],
+                    'chasing food': false,
+                    'money accumulate': Math.random()*0.5
+                },
+                {
+                    'name': 'guppy',
+                    'location':  [Math.random()*540+50, Math.random()*350+50],
+                    'current frame': 0,
+                    'stage': 1,
+                    'state': 'swim',
+                    'hungry': Math.random()*5,
+                    'target': [undefined, undefined],
+                    'target radius x': targetRadiusFreeX,
+                    'target radius y': targetRadiusFreeY,
+                    'speed': [2, 0],
+                    'real speed': [0, 0],
+                    'acceleration': [0, 0],
+                    'chasing food': false,
+                    'money accumulate': Math.random()*0.5
+                },
+                {
+                    'name': 'guppy',
+                    'location':  [Math.random()*540+50, Math.random()*350+50],
+                    'current frame': 0,
+                    'stage': 2,
+                    'state': 'swim',
+                    'hungry': Math.random()*5,
+                    'target': [undefined, undefined],
+                    'target radius x': targetRadiusFreeX,
+                    'target radius y': targetRadiusFreeY,
+                    'speed': [2, 0],
+                    'real speed': [0, 0],
+                    'acceleration': [0, 0],
+                    'chasing food': false,
+                    'money accumulate': Math.random()*0.5
+                },
+                {
+                    'name': 'guppy',
+                    'location':  [Math.random()*540+50, Math.random()*350+50],
                     'current frame': 3,
                     'stage': 3,
                     'state': 'swim',
-                    'hungry': false,
-                    'direction': [-2.5, 0],
-                    'want to turn': false
+                    'hungry': Math.random()*5,
+                    'target': [undefined, undefined],
+                    'target radius x': targetRadiusFreeX,
+                    'target radius y': targetRadiusFreeY,
+                    'speed': [-2, 0],
+                    'real speed': [0, 0],
+                    'acceleration': [0, 0],
+                    'chasing food': false,
+                    'money accumulate': Math.random()*0.5
                 }
             ];
+
+            let foods = [];
+
+            let moneyList = [];
+
+            function updateFallableObject(object)
+            {
+                if(object['on ground time'] == -1)
+                    {
+                        object['location'][1] += 3;
+
+                        if(object['location'][1] > 400)
+                            object['on ground time'] = 0;
+                    }
+                    else
+                    {
+                        object['on ground time'] += 1;
+                    }
+
+                    // if(object['on ground time'] == -1)
+                    object['current frame'] = (object['current frame'] + 1) % 10;
+            }
 
             // Function to update the animation frame
             function updateFrame() {
                 // Clear the canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Draw the current frame
-                objectList.forEach(object => {
-                    switch(object['name'])
+                animals.forEach(animal => {
+                    switch(animal['name'])
+                    {
+                        case 'niko':  // 珍珠贝
+                            drawObject(
+                                ctx,
+                                imageNiko,
+                                ...animal['location'],
+                                80, 80,
+                                false,
+                                animal['current frame'],
+                                0);
+
+                            if(animal['frame adding'])
+                            {
+                                animal['current frame'] +=1;
+                                if(animal['current frame'] == 9)
+                                    animal['frame adding'] = false;
+
+                            }
+                            else
+                            {
+                                animal['current frame'] -= 1;
+                                if(animal['current frame'] == 1)
+                                    animal['frame adding'] = true;
+                            }
+                    }
+                });
+
+                const foodNumberLast = foods.length;
+                foods = foods.filter(food => food['on ground time'] < 40);
+                if(foods.length == 0 && foodNumberLast > 0)
+                {
+                    animals.forEach(animal => {
+                        switch(animal['name'])
+                        {
+                            case 'guppy':
+                                if(animal['chasing food'])
+                                    animal['target'] = [undefined, undefined];
+                                break;
+                        }
+                    });
+                }
+
+                foods.forEach(food => {
+                    updateFallableObject(food);
+
+                    drawObject(
+                        ctx,
+                        imageFood,
+                        ...food['location'],
+                        40, 40,
+                        false,
+                        food['current frame'],
+                        food['type'],
+                        Math.min(1, 4 - food['on ground time'] / 10));
+                });
+
+                const moneyNumberLast = moneyList.length;
+                moneyList = moneyList.filter(food => food['on ground time'] < 40);
+                if(moneyList.length == 0 && moneyNumberLast > 0)
+                {
+                    // TODO 删除🐌的目标
+                }
+
+                moneyList.forEach(money => {
+                    updateFallableObject(money);
+
+                    drawObject(
+                        ctx,
+                        imageMoney,
+                        ...money['location'],
+                        72, 72,
+                        false,
+                        money['current frame'],
+                        money['type'],
+                        Math.min(1, 4 - money['on ground time'] / 10));
+                });
+
+                // console.log(animals);
+
+                animals.forEach(animal => {
+                    switch(animal['name'])
                     {
                         case 'guppy':
-                            switch(object['state'])
+                            animal['hungry'] += 0.015;
+
+                            // 生成钱
+                            if(animal['stage'] > 0)
+                                animal['money accumulate'] += 0.005;
+                            if(animal['money accumulate'] >= 1)
+                            {
+                                animal['money accumulate'] = 0;
+                                moneyList.push({
+                                    'type': animal['stage'] == 1 ? 0 : (animal['stage'] == 2 ? 1 : 3),
+                                    'location': [...animal['location']],
+                                    'current frame': 0,
+                                    'on ground time': -1  // -1 mean it's not on ground
+                                });
+                            }
+
+                            const locationLast = [...animal['location']];
+                            switch(animal['state'])
                             {
                                 case 'swim':
-                                    object['location'][0] += object['direction'][0];
-                                    object['location'][1] += object['direction'][1];
-                                    if(object['current frame'] == 9 && (object['location'][0] < 100 && object['direction'][0]<0 || object['location'][0] > 540 && object['direction'][0]>0))
+                                case 'eat':
+                                    // 移动
+                                    animal['location'][0] += animal['speed'][0];
+                                    animal['location'][1] += animal['speed'][1];
+
+                                    if(animal['target'][0]==undefined)
+                                        animal['target'][0] = animal['location'][0];
+                                    if(animal['target'][1]==undefined)
+                                        animal['target'][1] = animal['location'][1];
+
+                                    // 如果离目标太远，向目标方向加速
+                                    if(Math.abs(animal['target'][0]-animal['location'][0])>animal['target radius x'])
+                                        animal['speed'][0] += Math.sign(animal['target'][0]-animal['location'][0])*0.1;
+                                    animal['speed'][1] *= 0.9
+                                    if(Math.abs(animal['target'][1]-animal['location'][1])>animal['target radius y'])
+                                        animal['speed'][1] += Math.sign(animal['target'][1]-animal['location'][1])*(animal['chasing food'] ? 1 : 0.05);
+                                    animal['speed'][1] *= animal['chasing food'] ? 0.9 : 0.97;
+
+                                    // 限制最小速度
+                                    if(Math.abs(animal['speed'][0])<0.7 && animal['speed'][0]!=0)
+                                        animal['speed'][0] *= 0.7/Math.abs(animal['speed'][0]);
+
+                                    animal['chasing food'] = animal['hungry'] > 7 && foods.length > 0;
+                                    if(animal['chasing food'])
                                     {
-                                        object['state'] = 'turn';
-                                        object['current frame'] = 0;
+                                        // 追踪食物
+                                        let cloestFoodId = undefined;
+                                        let cloestFoodLocation = undefined;
+                                        let distanceMin = undefined;
+                                        let i = 0;
+                                        foods.forEach(food => {
+                                            const distance = Math.sqrt((food['location'][0] - animal['location'][0]) ** 2 + (food['location'][1] - animal['location'][1]) ** 2)
+                                            if(cloestFoodLocation == undefined || distance < distanceMin)
+                                            {
+                                                cloestFoodId = i;
+                                                cloestFoodLocation = food['location'];
+                                                distanceMin = distance;
+                                            }
+                                            i ++;
+                                        });
+
+                                        // console.log(distanceMin);
+                                        if(distanceMin < 10)  // Eat
+                                        {
+                                            console.log('ate');
+                                            animal['state'] = 'eat';
+                                            animal['current frame'] = 0;
+                                            animal['hungry'] = 0;
+                                            animal['target'] = [undefined, undefined];
+
+                                            foods.splice(cloestFoodId, 1);
+                                        }
+                                        else  // Chase
+                                        {
+                                            animal['target'] = cloestFoodLocation;
+                                            animal['target radius x'] = 5;
+                                            animal['target radius y'] = 0;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // 目标随机游走
+                                        animal['target'][0] += (Math.random()-0.5)*20;
+                                        animal['target'][1] += (Math.random()-0.5)*5;
+                                        animal['target'][0] = Math.max(150, Math.min(640-150, animal['target'][0]));
+                                        animal['target'][1] = Math.max(100, Math.min(480-100, animal['target'][1]));
+                                        animal['target radius x'] = targetRadiusFreeX;
+                                        animal['target radius y'] = targetRadiusFreeY;
+                                    }
+                                    
+
+                                    switch(animal['state'])
+                                    {
+                                        case 'swim':
+                                            if(animal['current frame'] >= 9)
+                                            {
+                                                // if(animal['location'][0] < 100 && animal['speed'][0]<0 || animal['location'][0] > 540 && animal['speed'][0]>0)
+                                                // {
+                                                //     animal['state'] = 'turn';
+                                                //     animal['current frame'] = 0;
+                                                // }
+
+                                                // 目标在背后很远时转向
+                                                if(
+                                                    (animal['speed'][0]>0 && animal['target'][0]+animal['target radius x']<animal['location'][0]) ||
+                                                    (animal['speed'][0]<0 && animal['target'][0]-animal['target radius x']>animal['location'][0]))
+                                                {
+                                                    animal['state'] = 'turn';
+                                                    animal['current frame'] = 0;
+                                                }
+                                            }
+
+                                            animal['current frame'] = (animal['current frame'] + 0.0 +
+                                                Math.min(1, Math.abs(
+                                                    animal['speed'][0] * 1 +
+                                                    animal['acceleration'][0] * 3))) % 10;
+
+                                            break;
+
+                                        case 'eat':
+                                            if(animal['current frame'] >= 9)
+                                            {
+                                                animal['state'] = 'swim';
+                                                animal['current frame'] = 0;
+                                            }
+
+                                            animal['current frame'] = (animal['current frame'] + 0.6) % 10;
+
+                                            break;
+                                    }
+
+
+                                    
+                                    break;
+                                
+                                case 'turn':
+                                    animal['location'][0] += animal['speed'][0]*(4.5-animal['current frame'])/4.5;
+                                    animal['location'][1] += animal['speed'][1];
+                                    if(animal['current frame'] >= 9)
+                                    {
+                                        animal['state'] = 'swim';
+                                        animal['current frame'] = 0;
+                                        animal['speed'][0] *= -0.1;
+                                    }
+
+                                    animal['current frame'] = (animal['current frame'] + 1) % 10;
+                                    break;
+                            }
+                            animal['location'][0] = Math.max(50, Math.min(640-50, animal['location'][0]));
+                            animal['location'][1] = Math.max(50, Math.min(480-80, animal['location'][1]));
+                            const speedLast = [...animal['real speed']];
+                            animal['real speed'] = [animal['location'][0]-locationLast[0], animal['location'][1]-locationLast[1]];
+                            animal['acceleration'] = [animal['real speed'][0]-speedLast[0], animal['real speed'][1]-speedLast[1]];
+                            
+                            drawObject(
+                                ctx,
+                                animal['state']=='swim' ? imageSmallSwim : (animal['state']=='eat' ? imageSmallEat : imageSmallTurn),
+                                ...animal['location'],
+                                80, 80,
+                                animal['speed'][0]>0,
+                                Math.floor(animal['current frame']),
+                                animal['stage']);
+                            
+                            // ctx.fillRect(...animal['target'], 10, 10);  // Display target (for debug)
+                            // console.log(Math.abs(animal['acceleration'][0]));
+
+                            break;
+
+                        case 'stinky':  // 🐌
+                            // Look for cloest money
+                            let cloestMoneyX = undefined;
+                            let cloestMoneyId = undefined;
+                            let distanceMin = undefined;
+                            let i = 0;
+                            moneyList.forEach(money => {
+                                const distance = Math.sqrt((money['location'][0] - animal['location'][0]) ** 2 + 0.5/*纵向距离次要*/ * (money['location'][1] - animal['location'][1]) ** 2)
+                                    if(cloestMoneyId == undefined || distance < distanceMin)
+                                    {
+                                        cloestMoneyId = i;
+                                        cloestMoneyX = money['location'][0];
+                                        distanceMin = distance;
+                                    }
+                                    i ++;
+                            });
+                            if(cloestMoneyId != undefined)
+                            {
+                                if(Math.abs(cloestMoneyX - animal['location'][0]) < 20 && Math.abs(moneyList[cloestMoneyId]['location'][1] - animal['location'][1]) < 8)
+                                {
+                                    console.log('money collected');
+                                    moneyList.splice(cloestMoneyId, 1);
+                                    cloestMoneyId = undefined;
+                                }
+                            }
+                            
+                            switch(animal['state'])
+                            {
+                                case 'move':
+                                    animal['location'][0] += animal['speed'][0];
+
+                                    if((cloestMoneyId != undefined &&
+                                            (animal['speed'][0] > 0 && cloestMoneyX < animal['location'][0] - 10 ||
+                                            animal['speed'][0] < 0 && cloestMoneyX > animal['location'][0] + 10)) ||
+                                        (animal['current frame'] >= 9 && (animal['location'][0] < 100 && animal['speed'][0]<0 || animal['location'][0] > 540 && animal['speed'][0]>0)))
+                                    {
+                                        animal['state'] = 'turn';
+                                        animal['current frame'] = 0;
                                     }
                                     break;
                                 
                                 case 'turn':
-                                    if(object['current frame'] == 9)
+                                    animal['location'][0] += animal['speed'][0]*(4.5-animal['current frame'])/4.5;
+                                    if(animal['current frame'] >= 9)
                                     {
-                                        object['state'] = 'swim';
-                                        object['current frame'] = 0;
-                                        object['direction'][0] *= -1;
+                                        animal['state'] = 'move';
+                                        animal['current frame'] = 0;
+                                        animal['speed'][0] *= -1;
                                     }
                                     break;
                             }
                             
-                            ctx.save();
-                            ctx.translate(...object['location']);
-                            ctx.scale(-Math.sign(object['direction'][0]), 1);
-                            drawImagePart(ctx, object['state']=='swim'?imageSmallSwim:imageSmallTurn, -40, -40, 80, 80, object['current frame'], object['stage']);
-                            ctx.restore();
+                            drawObject(
+                                ctx,
+                                imageStinky,
+                                ...animal['location'],
+                                80, 80,
+                                animal['speed'][0]>0,
+                                Math.floor(animal['current frame']),
+                                animal['state']=='move'?0:1);
 
-                            object['current frame'] = (object['current frame'] + 1) % 10;
+                            animal['current frame'] = (animal['current frame'] + 0.333) % 10;
 
                             break;
+                            
                     }
+
                 });
             }
 
             // Start the animation loop
             setInterval(updateFrame, 1000 / frameRate);
+
+            canvas.addEventListener("pointerdown", function(event){
+                const scaleFactor = canvas.width / canvas.offsetWidth;
+                const x = event.offsetX * scaleFactor;
+                const y = event.offsetY * scaleFactor;
+                console.log(x, y)
+
+                if(foods.length<3)
+                {
+                    foods.push({
+                        'location': [x, y],
+                        'current frame': 0,
+                        'type': 0,
+                        'on ground time': -1  // -1 mean it's not on ground
+                    });
+                }
+                
+            })
         }
     </script>
 </body>
