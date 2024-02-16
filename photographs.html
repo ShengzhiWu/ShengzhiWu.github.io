@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photographs</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="render/images-responsive-layout.js"></script>
 </head>
-<body style="margin:0; padding:0; background-color:white;" onscroll="bookrack.scrolling()">
+<body style="margin:0; padding:0; background-color:rgb(0, 0, 0); color: rgb(212, 212, 212);" onscroll="bookrack.scrolling()">
     <!-- Navigator -->
     <div class="navigator"></div>
     <script type="text/javascript">
@@ -18,12 +19,29 @@
 
     <h1 style="padding:1em; font-size:3em;">Photographs</h1>
 
+    <!-- People -->
+    <h2 style="padding-left: 1em;">People</h2>
+    <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
+                background-color:rgb(36, 36, 36);">
+        <div id="images-container-people" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
+    </div>
+    <script>ImagesResponsiveLayout.addImages("images-container-people", "assets/photographs/small/", "assets/photographs/lq/", [
+            "20240125232130.jpg", "IMG_20240125_175535_1.jpg", 
+            "IMG_20240125_172203.jpg", 
+            "IMG_20240125_155824.jpg", "IMG_20240125_161624.jpg"
+        ], 430/*heightMin*/, 580/*heightMax*/);</script>
+    <div style="position:relative; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+        <p>
+            All photos here have got permission from the photographed person for publication.
+        </p>
+    </div>
+
     <!-- Bookrack -->
     <h2 style="padding-left: 1em;">Infinite Bookracks</h2>
     <div id="bookrack-container" style="position:relative; width:100%; height:50em; background-color: white;
                 overflow: hidden;">
     </div>
-    <div style="position:relative; background-color: white; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
+    <div style="position:relative; margin-left:2em; margin-right:2em; margin-top:2em; margin-bottom:4em;">
         <p>
             The original photo of this artwork was taken in a bookstore in Shanghai, China.
             And it has been cliped and recombined here for secondarily creating.
@@ -33,10 +51,9 @@
 
     <h2 style="padding-left: 1em;">More</h2>
     <div style="position:relative; padding-top:1em; padding-bottom:1em; padding-left:3em; padding-right:3em;
-                background-color:rgb(247, 247, 247);">
+                background-color:rgb(36, 36, 36);">
         <div id="images-container" style="position:relative; left:0em; right:0em; top:0em; bottom:0em;"></div>
     </div>
-    <script src="render/images-responsive-layout.js"></script>
     <script>ImagesResponsiveLayout.addImages("images-container", "assets/photographs/small/", "assets/photographs/lq/", [
             "IMG_20210303_165944.jpg", "IMG_20210304_121234.jpg", 
             "IMG_20210308_195746.jpg", "IMG_20210308_200023.jpg", 

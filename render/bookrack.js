@@ -12,7 +12,7 @@ bookrack.layer1AspectRatio = 2553/3451;  // 图片1高宽比
 bookrack.layer2AspectRatio = 1612/1249;  // 图片2高宽比
 bookrack.layer2SizeF = 3451/1249*838.7/*图片2洞对角线长*//1871.8/*图片1洞对角线长*/;  // 图片2相对于图片1的尺寸系数
 
-bookrack.layerN = 40;  // 层数
+bookrack.layerN = 20;  // 层数
 bookrack.layers = [document.createElement('img')];
 bookrack.distances = [1];
 bookrack.layers[0].src = "assets/photographs/bookrack/layer-1.png";
@@ -84,3 +84,5 @@ bookrack.layout();
 window.addEventListener("resize", function(){  // 尺寸变更监听，用于使得画布占满整个页面
     bookrack.layout();
 });
+
+setInterval(bookrack.layout, 100);
