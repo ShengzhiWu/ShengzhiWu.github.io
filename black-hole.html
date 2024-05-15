@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black hole</title>
+    <script src="https://unpkg.com/three@0.140.0/build/three.js"></script>
+</head>
+<body style="margin:0; padding:0; position:absolute;">
+    <canvas id="canvas" style="margin:0; padding:0; position:absolute;"></canvas>
+    
+    <script>
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let camera_field_of_view = 90 / 180 * Math.PI;
+        let camera_theta = -0.08; // -0.08
+        let camera_phi = 0;
+        let camera_distance = 40;
+        const quality = 10.;  // 10.
+
+        function dot(u, v) {
+            return u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+        }
+
+        function normalize(v) {
+            const f = 1 / Math.sqrt(dot(v, v));
+            return [v[0] * f, v[1] * f, v[2] * f];
+        }
+
+        function vector_scale(k, v) {
+            return [k * v[0], k * v[1], k * v[2]];
+        }
+
+        function vector_add(u, v) {
+            u[0] += v[0];
+            u[1] += v[1];
+            u[2] += v[2];
+        }
+
+        function orthogonalize(v) {
+            v[0] = normalize(v[0]);
+            vector_add(v[1], vector_scale(-dot(v[1], v[0]), v[0]));
+            vector_add(v[2], vector_scale(-dot(v[2], v[0]), v[0]));
+            v[1] = normalize(v[1]);
+            vector_add(v[2], vector_scale(-dot(v[2], v[1]), v[1]));
+            v[2] = normalize(v[2]);
+            return v;
+        }
+
+        function get_camera_vectors() {
+            const size_factor = Math.max(canvas.width, canvas.height);
+            const center_direction = new THREE.Vector3(
+                Math.cos(camera_theta) * Math.cos(camera_phi),
+                Math.cos(camera_theta) * Math.sin(camera_phi),
+                Math.sin(camera_theta));
+
+            let basis = [
+                [center_direction.x, center_direction.y, center_direction.z],
+                [0.3200858940798752, 0.47710575553807155, -0.43267426722271596],
+                [-0.15282292322475932, 0.7192614793315424, 0.5417626872539909],
+                // [0, -1, 0],
+                // [0, 0, 1]
+            ];
+            basis = orthogonalize(basis);
+
+            // console.log(basis);
+
+            return {
+                center_direction,
+                x_vector: new THREE.Vector3(
+                    Math.sin(camera_phi),
+                    - Math.cos(camera_phi),
+                    0).multiplyScalar(Math.tan(camera_field_of_view / 2) * 2 * canvas.width / size_factor),
+                y_vector: new THREE.Vector3(
+                    Math.sin(camera_theta) * Math.cos(camera_phi),
+                    Math.sin(camera_theta) * Math.sin(camera_phi),
+                    - Math.cos(camera_theta)).multiplyScalar(- Math.tan(camera_field_of_view / 2) * 2 * canvas.height / size_factor),
+                vector_used_for_orthogonalization_1: new THREE.Vector3(...basis[1]),
+                vector_used_for_orthogonalization_2: new THREE.Vector3(...basis[2])
+            };
+        }
+
+        let renderer = undefined;
+        let scene = undefined;
+        let camera = undefined;
+        let material;
+        
+        function render() {
+            if (renderer && scene && camera)
+            renderer.render(scene, camera);
+            // requestAnimationFrame(render);
+        }
+
+        const texture_path = "assets/black-hole/"
+        const backgroun_x_pos = new THREE.TextureLoader().load(texture_path + "x+.png", render);
+        const backgroun_x_neg = new THREE.TextureLoader().load(texture_path + "x-.png", render);
+        const backgroun_y_pos = new THREE.TextureLoader().load(texture_path + "y+.png", render);
+        const backgroun_y_neg = new THREE.TextureLoader().load(texture_path + "y-.png", render);
+        const backgroun_z_pos = new THREE.TextureLoader().load(texture_path + "z+.png", render);
+        const backgroun_z_neg = new THREE.TextureLoader().load(texture_path + "z-.png", render);
+        const accretion_disk = new THREE.TextureLoader().load(texture_path + "accretion-disk.png", render);
+
+        renderer = new THREE.WebGLRenderer({canvas});
+        renderer.autoClearColor = false;
+
+        camera = new THREE.OrthographicCamera(
+            -1, // left
+            1, // right
+            1, // top
+            -1, // bottom
+            -1, // near,
+            1, // far
+        );
+        scene = new THREE.Scene();
+        const plane = new THREE.PlaneGeometry(2, 2);
+
+        const fragmentShader = `
+            #ifdef GL_ES
+            precision mediump float;
+            // precision highp float;
+            #endif
+
+            uniform vec2 u_resolution;
+            uniform vec3 location;
+            uniform vec3 center_direction;
+            uniform vec3 x_vector;
+            uniform vec3 y_vector;
+            uniform sampler2D backgroun_x_pos;
+            uniform sampler2D backgroun_x_neg;
+            uniform sampler2D backgroun_y_pos;
+            uniform sampler2D backgroun_y_neg;
+            uniform sampler2D backgroun_z_pos;
+            uniform sampler2D backgroun_z_neg;
+            uniform sampler2D accretion_disk;
+            uniform vec3 event_horizon_color;
+            uniform float background_brightness_factor;
+            uniform vec3 vector_used_for_orthogonalization_1;
+            uniform vec3 vector_used_for_orthogonalization_2;
+            
+            uniform float dt;
+            uniform int steps;
+            uniform float c;
+            uniform float G;
+            uniform float M;
+            uniform float epsilon;
+            uniform float schwarzschild_radius_factor;
+
+            // Accretion disk
+            uniform float accretion_disk_radius;
+            uniform float accretion_disk_thickness;
+            uniform vec3 accretion_disk_density;
+
+            mat4 orthogonalize(mat4 v) {
+                v[0] = normalize(v[0]);
+                v[1] -= dot(v[1], v[0]) * v[0];
+                v[2] -= dot(v[2], v[0]) * v[0];
+                v[3] -= dot(v[3], v[0]) * v[0];
+                v[1] = normalize(v[1]);
+                v[2] -= dot(v[2], v[1]) * v[1];
+                v[3] -= dot(v[3], v[1]) * v[1];
+                v[2] = normalize(v[2]);
+                v[3] -= dot(v[3], v[2]) * v[2];
+                v[3] = normalize(v[3]);
+                return v;
+            }
+
+            mat4 diag(float a, float b, float c, float d) {
+                return mat4(
+                    a, 0, 0, 0,
+                    0, b, 0, 0,
+                    0, 0, c, 0,
+                    0, 0, 0, d
+                );
+            }
+
+            mat4 getG(vec4 location) {
+                float r = length(location.yzw);
+
+                mat4 q;
+                q[0] = vec4(1., 0, 0, 0);
+                q[1] = vec4(0., location.yzw);
+                // q[2] = vec4(0., 0.3200858940798752, 0.47710575553807155, -0.43267426722271596);  // Random vectors
+                // q[3] = vec4(0., -0.15282292322475932, 0.7192614793315424, 0.5417626872539909);
+                q[2] = vec4(0., vector_used_for_orthogonalization_1);  // Random vectors
+                q[3] = vec4(0., vector_used_for_orthogonalization_2);
+                
+                q = orthogonalize(q);
+                q = transpose(q);  // Should not do this transpose. But the rendering result looks strange without this line.
+
+                float a = 1. - 2. * G * M / (c * c * r);
+                // a = 1. / r;
+
+                return transpose(q) * diag(c * c * a, -1. / a, -1., -1.) * q;
+                // return inverse(q) * diag(c * c * a, -1. / a, -1., -1.) * q;
+                // return transpose(q) * q;
+            }
+
+            mat4[4] getChristoffel(vec4 location, mat4[4] gamma) {
+                mat4 g = getG(location);
+                mat4 gInv = inverse(g);
+                mat4[4] dG;
+                dG[0] = (getG(location + vec4(epsilon, 0, 0, 0)) - g) / epsilon;
+                dG[1] = (getG(location + vec4(0, epsilon, 0, 0)) - g) / epsilon;
+                dG[2] = (getG(location + vec4(0, 0, epsilon, 0)) - g) / epsilon;
+                dG[3] = (getG(location + vec4(0, 0, 0, epsilon)) - g) / epsilon;
+                
+                // mat4[4] gamma;
+
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        // for (int k = 0; k < 4; k++) {
+                            gamma[i][j] = 0.5 * gInv * (dG[j][i] + dG[i][j] - vec4(dG[0][i][j], dG[1][i][j], dG[2][i][j], dG[3][i][j]));
+                        // }
+                    }
+                }
+
+                return gamma;
+            }
+
+            vec4 getBackground(vec3 v) {
+                vec3 v_abs = abs(v);
+                vec4 result;
+
+                if(v_abs.x >= v_abs.y && v_abs.x >= v_abs.z) {
+                    if(v.x >= 0.) {
+                        result = texture2D(backgroun_x_pos, v.yz * vec2(1., -1.) / v.x * 0.5 + 0.5) * background_brightness_factor;
+                    }
+                    else
+                        result = texture2D(backgroun_x_neg, v.yz * -1. / v.x * 0.5 + 0.5) * background_brightness_factor;
+                }
+                else if(v_abs.y >= v_abs.z) {
+                    if(v.y >= 0.) {
+                        result = texture2D(backgroun_y_pos, v.zx * vec2(1., -1.) / v.y * 0.5 + 0.5) * background_brightness_factor;
+                    }
+                    else
+                        result = texture2D(backgroun_y_neg, v.zx * -1. / v.y * 0.5 + 0.5) * background_brightness_factor;
+                }
+                else {
+                    if(v.z >= 0.) {
+                        result = texture2D(backgroun_z_pos, v.xy * vec2(1., -1.) / v.z * 0.5 + 0.5) * background_brightness_factor;
+                    }
+                    else
+                        result = texture2D(backgroun_z_neg, v.xy * -1. / v.z * 0.5 + 0.5) * background_brightness_factor;
+                }
+
+                return result;
+            }
+
+            void main() {
+                vec4 p = vec4(0., location);
+                vec2 coord_normalized = gl_FragCoord.xy / u_resolution - 0.5;
+                vec4 v = vec4(1., normalize(center_direction + x_vector * coord_normalized.x + y_vector * coord_normalized.y));
+                float  schwarzschild_radius = 2. * G * M / (c * c);
+                mat4[4] gamma;
+                vec4 a;
+
+                int i;
+                vec3 light_from_foreground;
+                for (i = 0; i < steps; i++) {
+                    float dt_factor = length(p.yzw) / schwarzschild_radius;
+
+                    // Accretion disk
+                    float rho_relative = length(p.yz) / (schwarzschild_radius * accretion_disk_radius);
+                    if (p.w > accretion_disk_thickness * -0.5 * (1. - rho_relative * 0.8)
+                        && p.w < accretion_disk_thickness * 0.5 * (1. - rho_relative * 0.8)
+                        && rho_relative < 1.) {
+                        light_from_foreground += accretion_disk_density * pow(1. - rho_relative, 2.) * dt * dt_factor * texture2D(accretion_disk, vec2(rho_relative, atan(p.y, p.z) / 6.2832 + 0.5)).x;
+                    }
+
+                    p += dt * dt_factor * v;
+                    if(length(p.yzw) <= schwarzschild_radius * schwarzschild_radius_factor)
+                        break;
+                    gamma = getChristoffel(p, gamma);
+                    a = vec4(0., 0, 0, 0);
+                    for (int j = 0; j < 4; j++)
+                        for (int k = 0; k < 4; k++)
+                            a -= gamma[j][k] * (v[j] * v[k]);
+                    v += dt * dt_factor * a;
+                }
+
+                if (i < steps)
+                    gl_FragColor = vec4(event_horizon_color + light_from_foreground, 1.);
+                else
+                    gl_FragColor = getBackground(v.yzw) + vec4(light_from_foreground, 0.);
+                
+            }
+        `
+
+        const camera_vectors = get_camera_vectors();
+        const uniforms = {
+            u_resolution:  { value: new THREE.Vector2(canvas.width, canvas.height) },
+            location:  { value: camera_vectors.center_direction.clone().multiplyScalar(- camera_distance) },
+            center_direction: { value: camera_vectors.center_direction },
+            x_vector: { value: camera_vectors.x_vector },
+            y_vector: { value: camera_vectors.y_vector },
+            vector_used_for_orthogonalization_1: { value: camera_vectors.vector_used_for_orthogonalization_1 },
+            vector_used_for_orthogonalization_2: { value: camera_vectors.vector_used_for_orthogonalization_2 },
+
+            backgroun_x_pos: {value: backgroun_x_pos},
+            backgroun_x_neg: {value: backgroun_x_neg},
+            backgroun_y_pos: {value: backgroun_y_pos},
+            backgroun_y_neg: {value: backgroun_y_neg},
+            backgroun_z_pos: {value: backgroun_z_pos},
+            backgroun_z_neg: {value: backgroun_z_neg},
+            accretion_disk: {value: accretion_disk},
+            event_horizon_color: {value: new THREE.Vector3(0., 0, 0)},
+
+            background_brightness_factor: {value: 1.5},
+
+            dt: {value: 0.15 / quality},
+            steps: {value: 75 * quality},
+            epsilon: {value: 0.1},
+            c: {value: 1},
+            G: {value: 1},
+            M: {value: 1},
+            schwarzschild_radius_factor: {value: 1.08},
+
+            // Accretion disk
+            accretion_disk_radius: {value: 15 },  // unit: schwarzschild radius
+            accretion_disk_thickness: {value: 0.7},
+            accretion_disk_density: {value: new THREE.Vector3(0.5, 0.2, 0.13).multiplyScalar(4.)},
+        };
+        material = new THREE.ShaderMaterial({
+            fragmentShader,
+            uniforms
+        });
+        scene.add(new THREE.Mesh(plane, material));
+
+        // render();
+
+        let draging_info = undefined;
+
+        canvas.addEventListener("pointerdown", function(event){
+
+            draging_info = {
+                start_x: event.x,
+                start_y: event.y,
+                start_camera_theta: camera_theta,
+                start_camera_phi: camera_phi
+            };
+        });
+
+        canvas.addEventListener("pointerup", function(event){
+            draging_info = undefined;
+        });
+
+        canvas.addEventListener("pointermove", function(event){
+            if(draging_info) {
+                const dx = event.x - draging_info.start_x;
+                const dy = event.y - draging_info.start_y;
+                const size_factor = Math.max(canvas.width, canvas.height);
+                camera_phi = draging_info.start_camera_phi - dx / size_factor * 2.;
+                camera_theta = draging_info.start_camera_theta - dy / size_factor * 2.;
+
+                const camera_vectors = get_camera_vectors();
+                material.uniforms.center_direction.value = camera_vectors.center_direction;
+                material.uniforms.location.value = camera_vectors.center_direction.clone().multiplyScalar(- camera_distance)
+                material.uniforms.x_vector.value = camera_vectors.x_vector;
+                material.uniforms.y_vector.value = camera_vectors.y_vector;
+                material.uniforms.vector_used_for_orthogonalization_1.value = camera_vectors.vector_used_for_orthogonalization_1;
+                material.uniforms.vector_used_for_orthogonalization_2.value = camera_vectors.vector_used_for_orthogonalization_2;
+
+                render();
+            }
+        });
+
+        canvas.addEventListener("wheel", function(event){
+            const size_factor = Math.max(canvas.width, canvas.height);
+            camera_distance *= Math.exp(event.deltaY * 0.001);
+
+            const camera_vectors = get_camera_vectors();
+            material.uniforms.center_direction.value = camera_vectors.center_direction;
+            material.uniforms.location.value = camera_vectors.center_direction.clone().multiplyScalar(- camera_distance)
+            material.uniforms.x_vector.value = camera_vectors.x_vector;
+            material.uniforms.y_vector.value = camera_vectors.y_vector;
+            material.uniforms.vector_used_for_orthogonalization_1.value = camera_vectors.vector_used_for_orthogonalization_1;
+            material.uniforms.vector_used_for_orthogonalization_2.value = camera_vectors.vector_used_for_orthogonalization_2;
+
+            render();
+        });
+    </script>
+</body>
+</html>
