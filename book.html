@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Box with Three.js</title>
+</head>
+<body style="margin:0; padding:0; position:absolute; background-color: rgb(146, 130, 116);">
+    <script type="module">
+        import * as THREE from "https://unpkg.com/three@0.140.0/build/three.module.js";
+
+        // const textures = Array.from({length: 12}, (_, i) => new THREE.TextureLoader().load("assets/book/0/[Allen Hatcher] Algebraic Topology-" + (i + 1) + " 拷贝.jpg", render));
+        const textures = Array.from({length: 20}, (_, i) => new THREE.TextureLoader().load("assets/book/1/NanoRes中文手册_打印-" + (i + 1) + " 拷贝.jpg", render));
+
+        const page_mesh_resolution = [20, 2];
+
+        const enable_shadow = false;  // 启用阴影（似乎无效）
+
+        let position_target = 1;
+        let position = position_target;
+
+        const camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.01, 10);
+        camera.position.z = 3.4;
+
+        const scene = new THREE.Scene();
+
+        var directionalLight = new THREE.DirectionalLight(0xffffff, 1); // 白色光，强度为 1
+        directionalLight.position.set(0, 10, -1); // 设置光源方向
+        directionalLight.castShadow = enable_shadow;
+        // directionalLight.shadow.mapSize.width = 1024;
+        // directionalLight.shadow.mapSize.height = 1024;
+        // directionalLight.shadow.camera.near = 0.5;
+        // directionalLight.shadow.camera.far = 50;
+        scene.add(directionalLight);
+
+        var ambient = new THREE.AmbientLight(0xdddddd);
+        scene.add(ambient);
+        
+        scene.background = new THREE.Color('rgb(146, 130, 116)');
+
+        function generate_new_page(direction) {
+            let vertices, indexes, uvs, normals, mesh;
+
+            // Page middle 1
+            var geometry = new THREE.BufferGeometry();
+            vertices = [];
+            indexes = [];
+            uvs = [];
+            normals = [];
+            let vertex_id = 0;
+            for(let j=0; j<page_mesh_resolution[1]; j++){
+                for(let i=0; i<page_mesh_resolution[0]; i++) {
+                    vertices.push(i / (page_mesh_resolution[0] - 1),
+                                  (j - 0.5) * 1.2938005390835579,
+                                  0);
+                    normals.push(0., 0., 1.);
+                    if(direction == 0) {
+                        if(j > 0 && i > 0)
+                            indexes.push(
+                                vertex_id - page_mesh_resolution[0] - 1, vertex_id - page_mesh_resolution[0], vertex_id,
+                                vertex_id - page_mesh_resolution[0] - 1, vertex_id, vertex_id - 1);
+                        uvs.push(i / (page_mesh_resolution[0] - 1), j);
+                    }
+                    else {
+                        if(j > 0 && i > 0)
+                        indexes.push(
+                                vertex_id - page_mesh_resolution[0] - 1, vertex_id, vertex_id - page_mesh_resolution[0],
+                                vertex_id - page_mesh_resolution[0] - 1, vertex_id - 1, vertex_id);
+                        uvs.push(1 - i / (page_mesh_resolution[0] - 1), j);
+                    }
+                    vertex_id ++;
+                }
+            }
+
+            vertices = new Float32Array(vertices);
+            indexes = new Uint16Array(indexes);
+            uvs = new Float32Array(uvs);
+            normals = new Float32Array(normals);
+            geometry.attributes.position = new THREE.BufferAttribute(vertices, 3);
+            geometry.index = new THREE.BufferAttribute(indexes, 1);
+            geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+            geometry.attributes.normal = new THREE.BufferAttribute(normals, 3);
+
+            const page_middle_1_material = new THREE.MeshLambertMaterial({
+                color: 0xffffff
+            });
+
+            return [geometry, page_middle_1_material]
+        }
+        
+        const [page_left_geometry, page_left_material] = generate_new_page(1);
+        page_left_geometry.castShadow = enable_shadow;
+        page_left_geometry.receiveShadow = enable_shadow;
+        scene.add(new THREE.Mesh(page_left_geometry, page_left_material));
+        
+        const [page_middle_1_geometry, page_middle_1_material] = generate_new_page(0);
+        page_middle_1_geometry.castShadow = enable_shadow;
+        page_middle_1_geometry.receiveShadow = enable_shadow;
+        scene.add(new THREE.Mesh(page_middle_1_geometry, page_middle_1_material));
+        
+        const [page_middle_2_geometry, page_middle_2_material] = generate_new_page(1);
+        page_middle_2_geometry.castShadow = enable_shadow;
+        page_middle_2_geometry.receiveShadow = enable_shadow;
+        scene.add(new THREE.Mesh(page_middle_2_geometry, page_middle_2_material));
+        
+        const [page_right_geometry, page_right_material] = generate_new_page(0);
+        page_right_geometry.castShadow = enable_shadow;
+        page_right_geometry.receiveShadow = enable_shadow;
+        scene.add(new THREE.Mesh(page_right_geometry, page_right_material));
+
+        const renderer = new THREE.WebGLRenderer({
+        antialias: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = enable_shadow;
+
+        function update_page_mesh(geometry, t, moving_right) {
+            var positionAttribute = geometry.attributes.position;
+            var normalAttribute = geometry.attributes.normal;
+            var positions = positionAttribute.array;
+            var normals = normalAttribute.array;
+
+            for(let i=0; i<page_mesh_resolution[0]; i++) {
+                const a = i / (page_mesh_resolution[0] - 1);
+                const angle = (t * t + 2 * (moving_right ? 1 - (0.8 * a + 0.1): 0.8 * a + 0.1) * (t - t * t)) * Math.PI;
+                let dangleda = (2 * (moving_right ? -0.8: 0.8) * (t - t * t)) * Math.PI;
+                let x = a * Math.cos(angle);
+                let z = a * Math.sin(angle) * 0.5;
+                let dxda = Math.cos(angle) - a * Math.sin(angle) * dangleda;
+                let dyda = Math.cos(angle) + a * Math.cos(angle) * dangleda;
+                if(t == 0 || t == 1)
+                    z -= 0.001;
+                for(let j=0; j<page_mesh_resolution[1]; j++){
+                    positions[(j * page_mesh_resolution[0] + i) * 3 + 0] = x;
+                    positions[(j * page_mesh_resolution[0] + i) * 3 + 2] = z;
+                    normals[(j * page_mesh_resolution[0] + i) * 3 + 0] = -dyda;
+                    normals[(j * page_mesh_resolution[0] + i) * 3 + 2] = dxda;
+                }
+            }
+
+            // 通知 Three.js 需要更新顶点、法向
+            positionAttribute.needsUpdate = true;
+            normalAttribute.needsUpdate = true;
+        }
+
+        function update_meshes(t, moving_right) {
+            t += 0.0001;  // Has bad behaviours when t is integer.
+            t = Math.max(0.0001, t);
+            t = Math.min(textures.length / 2 - 0.0001, t);
+            if(t < 1)
+                update_page_mesh(page_left_geometry, 0, moving_right);  // Hide
+            else
+                update_page_mesh(page_left_geometry, 1, moving_right);
+            update_page_mesh(page_middle_1_geometry, t - Math.floor(t), moving_right);
+            update_page_mesh(page_middle_2_geometry, t - Math.floor(t), moving_right);
+            if(t >= textures.length / 2 - 1)
+                update_page_mesh(page_right_geometry, 1, moving_right);  // Hide
+            else
+                update_page_mesh(page_right_geometry, 0, moving_right);
+
+            page_left_material.map = textures[Math.max(0, Math.floor(t) * 2 - 1)];
+            page_middle_1_material.map = textures[Math.floor(t) * 2];
+            page_middle_2_material.map = textures[Math.floor(t) * 2 + 1];
+            page_right_material.map = textures[Math.min(textures.length - 1, Math.floor(t) * 2 + 2)];
+
+            page_left_material.needsUpdate= true;
+            page_middle_1_material.needsUpdate= true;
+            page_middle_2_material.needsUpdate= true;
+            page_right_material.needsUpdate= true;
+        }
+
+        function render(time) {
+            renderer.render(scene, camera);
+        }
+
+        render();
+        document.body.appendChild(renderer.domElement);
+
+        update_meshes(position, true);
+        render();
+
+        function update() {
+            if(position < position_target - 0.0001) {
+                position += 0.025;
+                update_meshes(position, true);
+                render();
+                setTimeout(update, 16);
+            }
+            else if(position > position_target + 0.0001){
+                position -= 0.025;
+                update_meshes(position, false);
+                render();
+                setTimeout(update, 16);
+            }
+            else
+                position = position_target;
+        }
+
+        window.addEventListener("click", function(event){  // 左键单击
+            const x_relative = event.x / renderer.domElement.offsetWidth;
+            if(x_relative < 0.5) {
+                position_target = Math.max(0, position_target - 1);
+                update();
+            }
+            else {
+                position_target = Math.min(textures.length / 2, position_target + 1);
+                update();
+            }
+        });
+    </script>
+</body>
+</html>
