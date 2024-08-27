@@ -7,26 +7,42 @@
     <title>Book</title>
 </head>
 <body style="margin:0; padding:0; position:absolute; background-color: rgb(146, 130, 116);">
+    <script>
+        // Geometry Parameters
+        const camera_distance_factor = 3.4;
+        const camera_angle = 25;
+        const background_color = 'rgb(146, 130, 116)';
+        const paper_aspect_ratio = 1440 / 1113;
+        const paper_mesh_horizontal_resolution = 20;
+
+        // Animation Parameters
+        const page_turning_speed = 0.025;
+
+        // Rendering Parameters
+        const texture_files = Array.from({length: 20}, (_, i) => "assets/book/1/NanoRes中文手册_打印-" + (i + 1) + " 拷贝.jpg");
+        const ambient_light_color = 0xeeeeee;
+        const directional_light_strength = 1.3;
+        const directional_light_direction = [0, 10, -1];
+        const enable_shadow = false;  // 启用阴影（似乎无效）
+    </script>
+    
     <script type="module">
         import * as THREE from "https://unpkg.com/three@0.140.0/build/three.module.js";
 
-        // const textures = Array.from({length: 12}, (_, i) => new THREE.TextureLoader().load("assets/book/0/[Allen Hatcher] Algebraic Topology-" + (i + 1) + " 拷贝.jpg", render));
-        const textures = Array.from({length: 20}, (_, i) => new THREE.TextureLoader().load("assets/book/1/NanoRes中文手册_打印-" + (i + 1) + " 拷贝.jpg", render));
+        const textures = texture_files.map(file => new THREE.TextureLoader().load(file, render));
 
-        const page_mesh_resolution = [20, 2];
-
-        const enable_shadow = false;  // 启用阴影（似乎无效）
+        const page_mesh_resolution = [paper_mesh_horizontal_resolution, 2];
 
         let position_target = 1;
         let position = position_target;
 
-        const camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.01, 10);
-        camera.position.z = 3.4 * window.innerHeight / Math.min(window.innerWidth * 0.75, window.innerHeight);
+        const camera = new THREE.PerspectiveCamera(camera_angle, window.innerWidth / window.innerHeight, 0.01, 10);
+        camera.position.z = camera_distance_factor * window.innerHeight / Math.min(window.innerWidth * 0.97 / paper_aspect_ratio, window.innerHeight);
 
         const scene = new THREE.Scene();
 
-        var directionalLight = new THREE.DirectionalLight(0xffffff, 1.3); // 白色光，强度为 1
-        directionalLight.position.set(0, 10, -1); // 设置光源方向
+        var directionalLight = new THREE.DirectionalLight(0xffffff, directional_light_strength); // 白色光，强度为 1
+        directionalLight.position.set(...directional_light_direction); // 设置光源方向
         directionalLight.castShadow = enable_shadow;
         // directionalLight.shadow.mapSize.width = 1024;
         // directionalLight.shadow.mapSize.height = 1024;
@@ -34,10 +50,10 @@
         // directionalLight.shadow.camera.far = 50;
         scene.add(directionalLight);
 
-        var ambient = new THREE.AmbientLight(0xeeeeee);
+        var ambient = new THREE.AmbientLight(ambient_light_color);
         scene.add(ambient);
         
-        scene.background = new THREE.Color('rgb(146, 130, 116)');
+        scene.background = new THREE.Color(background_color);
 
         function generate_new_page(direction) {
             let vertices, indexes, uvs, normals, mesh;
@@ -52,7 +68,7 @@
             for(let j=0; j<page_mesh_resolution[1]; j++){
                 for(let i=0; i<page_mesh_resolution[0]; i++) {
                     vertices.push(i / (page_mesh_resolution[0] - 1),
-                                  (j - 0.5) * 1.2938005390835579,
+                                  (j - 0.5) * paper_aspect_ratio,
                                   0);
                     normals.push(0., 0., 1.);
                     if(direction == 0) {
@@ -182,13 +198,13 @@
 
         function update() {
             if(position < position_target - 0.0001) {
-                position += 0.025;
+                position = Math.min(position_target, position + page_turning_speed);
                 update_meshes(position, true);
                 render();
                 setTimeout(update, 16);
             }
             else if(position > position_target + 0.0001){
-                position -= 0.025;
+                position = Math.max(position_target, position - page_turning_speed);
                 update_meshes(position, false);
                 render();
                 setTimeout(update, 16);
