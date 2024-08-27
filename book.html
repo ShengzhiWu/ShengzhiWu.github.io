@@ -21,7 +21,7 @@
         let position = position_target;
 
         const camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.01, 10);
-        camera.position.z = 3.4;
+        camera.position.z = 3.4 * window.innerHeight / Math.min(window.innerWidth * 0.75, window.innerHeight);
 
         const scene = new THREE.Scene();
 
