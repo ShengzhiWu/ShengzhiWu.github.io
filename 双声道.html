@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Signal Generator</title>
+    <style>
+        canvas {
+            border: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        label {
+            margin-right: 10px;
+        }
+        .custom-slider {
+            width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <button id="startButton">Start</button>
+    <button id="stopButton" disabled>Stop</button>
+    <div class="controls">
+        <label for="frequency">Frequency:</label>
+        <input type="range" class="custom-slider" id="frequency" min="0" max="1000" step="0.01" value="200">
+        <span id="frequencyValue">200</span>
+    </div>
+    <div class="controls">
+        <label for="phaseOffset">Phase Offset:</label>
+        <input type="range" class="custom-slider" id="phaseOffset" min="-3.1415927" max="3.1415927" step="0.0001" value="0">
+        <span id="phaseOffsetValue">0.0000</span>
+    </div>
+    <div class="controls">
+        <label for="squareRatio">Square Wave Ratio:</label>
+        <input type="range" class="custom-slider" id="squareRatio" min="0" max="1" step="0.0001" value="0">
+        <span id="squareRatioValue">0.0000</span>
+    </div>
+    <canvas id="waveformCanvas" width="800" height="200"></canvas>
+    <script>
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const frequencySlider = document.getElementById('frequency');
+        const phaseOffsetSlider = document.getElementById('phaseOffset');
+        const squareRatioSlider = document.getElementById('squareRatio');
+        const frequencyValueLabel = document.getElementById('frequencyValue');
+        const phaseOffsetValueLabel = document.getElementById('phaseOffsetValue');
+        const squareRatioValueLabel = document.getElementById('squareRatioValue');
+        const canvas = document.getElementById('waveformCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function plotEmptyWave() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.strokeStyle = 'blue';
+            ctx.stroke();
+        }
+
+        plotEmptyWave();
+
+        // 创建音频上下文
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sampleRate = audioCtx.sampleRate;
+        let audioNode = null;
+        let animationId = null;  // 用于索引波形绘制动画对象
+        let frequency = parseFloat(frequencySlider.value);
+        let phaseOffset = parseFloat(phaseOffsetSlider.value);
+        let squareRatio = parseFloat(squareRatioSlider.value);
+
+        // 更新显示的滑块值
+        frequencySlider.oninput = function() {
+            frequency = parseFloat(frequencySlider.value);
+            frequencyValueLabel.textContent = frequency.toFixed(2);
+        };
+        phaseOffsetSlider.oninput = function() {
+            phaseOffset = parseFloat(phaseOffsetSlider.value);
+            phaseOffsetValueLabel.textContent = phaseOffset.toFixed(4);
+        };
+        squareRatioSlider.oninput = function() {
+            squareRatio = parseFloat(squareRatioSlider.value);
+            squareRatioValueLabel.textContent = squareRatio.toFixed(4);
+        };
+
+        const bufferSize = 128;
+        
+        // 注册 AudioWorklet
+        async function loadWorklet() {
+            await audioCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([`
+                class CustomWaveProcessor extends AudioWorkletProcessor {
+                    static get parameterDescriptors() {
+                        return [
+                            { name: 'frequency', defaultValue: 110, minValue: 0, maxValue: 7000 },
+                            { name: 'phaseOffset', defaultValue: 0, minValue: -Math.PI, maxValue: Math.PI },
+                            { name: 'squareRatio', defaultValue: 0.5, minValue: 0, maxValue: 1 }
+                        ];
+                    }
+
+                    constructor() {
+                        super();
+                        this.amplitude = 1;
+                        this.sampleRate = sampleRate;
+                        this.time = 0;
+                        this.phase = 0;
+                        this.bufferLeft = new Float32Array(` + bufferSize + `);
+                        this.bufferRight = new Float32Array(` + bufferSize + `);
+                    }
+
+                    process(inputs, outputs, parameters) {
+                        const outputLeft = outputs[0][0]; // 左声道
+                        const outputRight = outputs[0][1]; // 右声道
+                        const frequency = parameters.frequency[0];
+                        const phaseOffset = parameters.phaseOffset[0];  // 第二声道的相位偏移
+                        const squareRatio = parameters.squareRatio[0];
+
+                        for (let i = 0; i < outputLeft.length; i++) {
+                            // 左声道
+                            let sineWave = Math.sin(this.phase);
+                            let squareWave = Math.sign(sineWave);
+                            let sample = (1 - squareRatio) * sineWave + squareRatio * squareWave;
+                            outputLeft[i] = sample * this.amplitude; // 左声道数据
+
+                            // 右声道
+                            sineWave = Math.sin(this.phase + phaseOffset);
+                            squareWave = Math.sign(sineWave);
+                            sample = (1 - squareRatio) * sineWave + squareRatio * squareWave;
+                            outputRight[i] = sample * this.amplitude; // 右声道数据
+
+                            this.time += 1 / this.sampleRate;
+                            this.phase += 2 * Math.PI * frequency / this.sampleRate;
+                            while (this.phase >= 2 * Math.PI) this.phase -= 2 * Math.PI;
+
+                            this.bufferLeft[i] = outputLeft[i];
+                            this.bufferRight[i] = outputRight[i];
+                        }
+
+                        // 发送音频数据到主线程，仅发送左声道数据供绘图使用
+                        this.port.postMessage([this.bufferLeft, this.bufferRight]);
+                        return true;
+                    }
+                }
+
+                registerProcessor('custom-wave-processor', CustomWaveProcessor);
+            `], { type: 'application/javascript' })));
+        }
+
+        // 初始化 AudioWorkletNode
+        async function initAudio() {
+            await loadWorklet();
+            const workletNode = new AudioWorkletNode(audioCtx, 'custom-wave-processor', {
+                numberOfOutputs: 1,
+                outputChannelCount: [2], // 设置为双声道
+            });
+            
+            // 创建参数映射
+            workletNode.parameters.get('frequency').value = frequency;
+            workletNode.parameters.get('squareRatio').value = squareRatio;
+
+            // 实时更新参数
+            frequencySlider.addEventListener('input', () => {
+                workletNode.parameters.get('frequency').value = frequency;
+            });
+            phaseOffsetSlider.addEventListener('input', () => {
+                workletNode.parameters.get('phaseOffset').value = phaseOffset;
+            });
+            squareRatioSlider.addEventListener('input', () => {
+                workletNode.parameters.get('squareRatio').value = squareRatio;
+            });
+
+            workletNode.connect(audioCtx.destination);
+
+            // 波形绘制
+            var plotDuration = 0.1;  // 绘制波形时长
+            var trigger = 'rising edge';  // 触发机制，类似示波器的触发功能。undefined表示无触发条件
+            var triggerMaxSearchingDuration = 0.1;  // 回溯寻找触发条件的最大回溯时长，当波周期小于此值时触发机制不能有效工作
+            const waveArrayL = new Float32Array(bufferSize * Math.round((plotDuration + triggerMaxSearchingDuration + 0.1/*估计的绘图所需要的时间的上限，也不应小于最大回溯时长*/) * sampleRate / bufferSize));
+            const waveArrayR = new Float32Array(waveArrayL.length);
+
+            // 接收来自 AudioWorkletProcessor 的音频数据
+            var waveArrayPointer = 0;
+            workletNode.port.onmessage = (event) => {
+                waveArrayL.set(event.data[0], waveArrayPointer);
+                waveArrayR.set(event.data[1], waveArrayPointer);
+                waveArrayPointer += bufferSize;
+                if(waveArrayPointer >= waveArrayL.length)
+                    waveArrayPointer = 0;
+            };
+
+            // 绘制波形
+            function drawWaveform() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 触发
+                var end = waveArrayPointer - 1;
+                const triggerMaxSearchingSamples = Math.ceil(triggerMaxSearchingDuration * sampleRate);
+                switch(trigger) {
+                    case 'rising edge':  //上升沿触发
+                        let i;
+                        for(i = 0; i < triggerMaxSearchingSamples; i ++) {
+                            if(end < 0)
+                                end += waveArrayL.length;
+                            let last = end - 1;
+                            if(last < 0)
+                                last += waveArrayL.length;
+                            let lastlast = last - 1;
+                            if(lastlast < 0)
+                                lastlast += waveArrayL.length;
+                            if(waveArrayL[end] > waveArrayL[last] && waveArrayL[last] <= waveArrayL[lastlast])
+                                break;
+                            end = last;
+                        }
+                        if(i >= triggerMaxSearchingSamples)  // 未找到满足触发条件的时刻
+                            end = waveArrayPointer - 1;
+                        break;
+                }
+
+                ctx.beginPath();
+                for (let i = 0; i < canvas.width; i++) {
+                    const x = canvas.width - i;
+                    let j = end - Math.round(i / canvas.width * plotDuration * sampleRate);
+                    while(j < 0)
+                        j += waveArrayL.length;
+                    const y = canvas.height / 2 - (waveArrayR[j] * canvas.height / 2);
+                    if(i == 0)
+                        ctx.moveTo(x, y);
+                    else
+                        ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = 'red';
+                ctx.stroke();
+
+                ctx.beginPath();
+                for (let i = 0; i < canvas.width; i++) {
+                    const x = canvas.width - i;
+                    let j = end - Math.round(i / canvas.width * plotDuration * sampleRate);
+                    while(j < 0)
+                        j += waveArrayL.length;
+                    const y = canvas.height / 2 - (waveArrayL[j] * canvas.height / 2);
+                    if(i == 0)
+                        ctx.moveTo(x, y);
+                    else
+                        ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = 'blue';
+                ctx.stroke();
+
+                animationId = requestAnimationFrame(drawWaveform);
+            }
+            
+            drawWaveform();
+            return workletNode;
+        }
+
+        // 启动音频
+        async function startAudio() {
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            if (!audioNode) {
+                audioNode = await initAudio();
+            }
+            startButton.disabled = true;
+            stopButton.disabled = false;
+        }
+
+        // 停止音频
+        function stopAudio() {
+            if (audioNode) {
+                audioNode.disconnect();
+                audioNode = null;
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            plotEmptyWave();
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        startButton.onclick = startAudio;
+        stopButton.onclick = stopAudio;
+    </script>
+</body>
+</html>
