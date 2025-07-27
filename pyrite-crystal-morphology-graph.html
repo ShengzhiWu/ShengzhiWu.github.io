@@ -697,6 +697,7 @@
             text.setAttribute('font-size', fontSize);
             text.setAttribute('font-family', fontFamily);
             text.setAttribute('fill', fill);
+            text.setAttribute('style', 'user-select: none; pointer-events: none;');
 
             const textPath = document.createElementNS('http://www.w3.org/2000/svg', 'textPath');
             textPath.setAttribute('href', '#' + pathId);
